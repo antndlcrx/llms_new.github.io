@@ -669,7 +669,7 @@
 
 .hero-event {
   position: relative;
-  padding: clamp(72px, 9vw, 124px) 0 clamp(56px, 7vw, 96px);
+  padding: clamp(56px, 6.5vw, 88px) 0 clamp(32px, 4vw, 52px);
   overflow: hidden; isolation: isolate;
   background:
     radial-gradient(70% 80% at 100% 100%, color-mix(in srgb, var(--c-b) 14%, transparent) 0%, transparent 60%),
@@ -679,34 +679,44 @@
 .hero-event-inner {
   position: relative; z-index: 2;
   max-width: var(--max-w-page); margin: 0 auto; padding: 0 32px;
-  display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 5vw, 64px); align-items: end;
+  display: grid; grid-template-columns: 1fr 1.05fr; gap: clamp(32px, 5vw, 64px); align-items: center;
 }
-@media (max-width: 880px) { .hero-event-inner { grid-template-columns: 1fr; gap: 24px; align-items: start; } }
-.event-date { position: relative; display: flex; flex-direction: column; align-items: flex-start; }
-.event-date .ed-kicker {
+@media (max-width: 880px) {
+  .hero-event-inner { grid-template-columns: 1fr; gap: 32px; align-items: start; }
+  .event-gallery { order: -1; }
+}
+.ed-kicker {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.18em; color: var(--accent); margin-bottom: 14px;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--accent); margin-bottom: 18px;
   display: flex; align-items: center; gap: 10px;
 }
-.event-date .ed-kicker::before { content: ""; width: 24px; height: 1px; background: currentColor; opacity: 0.6; }
-.event-date .ed-range {
-  font-family: var(--font-heading); font-weight: 700;
-  font-size: clamp(96px, 14vw, 180px); line-height: 0.86; letter-spacing: -0.05em;
-  background: var(--grad-primary); -webkit-background-clip: text; background-clip: text;
-  color: transparent; margin: 0; display: inline-block;
-}
-.event-date .ed-month {
-  font-family: var(--font-heading); font-weight: 700;
-  font-size: clamp(26px, 3.2vw, 38px); letter-spacing: -0.02em; color: var(--text); margin: 10px 0 0;
-}
-.event-date .ed-where {
-  display: flex; align-items: center; gap: 10px;
-  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--text-muted); margin-top: 22px;
-}
-.event-date .ed-where::before { content: ""; width: 18px; height: 1px; background: currentColor; opacity: 0.55; }
+.ed-kicker::before { content: ""; width: 24px; height: 1px; background: currentColor; opacity: 0.6; }
 .event-content { padding-bottom: 12px; }
-.event-content .h-title { font-family: var(--font-heading); font-weight: 700; font-size: clamp(26px, 3vw, 36px); line-height: 1.15; letter-spacing: -0.025em; margin: 0 0 18px; max-width: 22ch; }
+.event-content .h-title {
+  font-family: var(--font-heading); font-weight: 700;
+  font-size: clamp(28px, 3.4vw, 42px); line-height: 1.12; letter-spacing: -0.03em;
+  margin: 0 0 18px; max-width: 20ch;
+}
+
+/* Hero photo mosaic: one wide lead over two supporting frames */
+.event-gallery {
+  margin: 0; display: grid; gap: 10px;
+  grid-template-columns: 1fr 1fr;
+}
+.event-gallery img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  border-radius: 14px; border: 1px solid var(--border);
+  aspect-ratio: 4/3;
+}
+.event-gallery .eg-lead { grid-column: 1 / -1; aspect-ratio: 16/9; }
+.event-gallery figcaption {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text-dim); margin-top: 2px;
+}
+
+/* The stats band directly below the hero already carries the headline
+   facts (editions, places, days, fee), so the hero does not repeat them. */
 
 /* Summer school day rail ------------------------------------ */
 .days { display: grid; gap: 14px; }
@@ -1011,6 +1021,22 @@ button.speaker-grid--team .speaker-chip,
 }
 @media (max-width: 560px) {
   .photo-spread { grid-template-columns: 1fr; }
+}
+
+/* Single wide photo, same treatment as .photo-spread -------- */
+.photo-wide { margin: 32px 0; }
+.photo-wide img {
+  width: 100%; aspect-ratio: 21/9; object-fit: cover;
+  border-radius: 14px; border: 1px solid var(--border); display: block;
+}
+@media (max-width: 560px) {
+  .photo-wide img { aspect-ratio: 3/2; }
+}
+
+/* Caption, shared by .photo-spread and .photo-wide ---------- */
+.photo-caption {
+  font-family: var(--font-mono); font-size: 11.5px; line-height: 1.5;
+  letter-spacing: 0.02em; color: var(--text-dim); margin: 10px 0 0;
 }
 
 /* Cohort card (summer school "last year" photo card) -------- */

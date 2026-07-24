@@ -41,12 +41,11 @@ import Partners from '../components/Partners.astro';
         We run an annual summer school at Nuffield College, develop an open-source
         course on the fundamentals of LLMs for social scientists, and work on
         methods research. Our faculty spans academic research and the ML industry.
-        Everything is open.
       </p>
 
       <div class="hero-actions" style="margin-top:32px; display:flex; gap:12px; flex-wrap:wrap;">
         <a class="btn-primary" href="/summer-school/2026/">
-          Summer school 2026 <span class="arrow">→</span>
+          2026 highlights <span class="arrow">→</span>
         </a>
         <a class="btn-ghost" href="/research/">
           Research <span class="arrow">→</span>
@@ -54,13 +53,25 @@ import Partners from '../components/Partners.astro';
       </div>
 
       <div class="hero-meta">
-        <span>13–17 July 2026</span>
+        <span>Fourth edition · 13–17 July 2026</span>
         <span class="sep"></span>
         <span>Nuffield College, Oxford</span>
         <span class="sep"></span>
-        <span>Applications closed</span>
+        <span>2027 dates to be announced</span>
       </div>
     </div>
+  </div>
+
+  <!-- Wide photograph between the type-led hero and the first section.
+       Not a .reveal: that fires immediately for anything already in view, so
+       the photo landed before the hero had finished animating in. It runs on
+       the hero's own timeline instead, after the last hero line. -->
+  <div class="shell home-band">
+    <div class="photo-wide" style="margin:0;">
+      <img src="/img/posts/report_2026/lecture_hall_2026.jpg"
+           alt="A lecturer presenting to the cohort in the Nuffield College lecture room" />
+    </div>
+    <p class="photo-caption">Oxford LLMs 2026, Nuffield College</p>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -143,39 +154,29 @@ import Partners from '../components/Partners.astro';
         </div>
         <p class="lede-v3">
           Early-career researchers. Lectures, labs, collaborative research.
-          Now entering its fourth year.
+          Four editions run since 2023.
         </p>
       </div>
 
-      <!-- 2026 teaser -->
-      <div class="apply-teaser reveal">
-        <div>
-          <p class="at-title">Oxford LLMs 2026</p>
-          <p class="at-row" style="margin-bottom:0">13–17 July · Nuffield College, Oxford</p>
-        </div>
-        <div class="at-cta">
-          <a class="btn-primary" href="/summer-school/2026/">
-            Programme &amp; speakers <span class="arrow">→</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Cohort photo + materials -->
+      <!-- Cohort photo + materials. The 2026 teaser bar that used to sit here
+           was a third link to /summer-school/2026/ within one screen; the
+           cohort card below says the same thing with a photograph. -->
       <div class="ss-pair reveal-stagger">
         <article class="cohort-card">
           <img
-            src="/img/posts/report_2025/group_photo_2025.jpg"
-            alt="Oxford LLMs 2025 cohort group photo at Nuffield College"
+            src="/img/posts/report_2026/group_photo_2026.jpg"
+            alt="Oxford LLMs 2026 cohort group photo at Nuffield College"
           />
           <div class="cc-body">
-            <span class="cc-tag">2025 Cohort</span>
-            <h3 class="cc-title">30 researchers. 5 days. Nuffield College.</h3>
+            <span class="cc-tag">2026 Cohort</span>
+            <h3 class="cc-title">Six teams. 5 days. Nuffield College.</h3>
             <p class="cc-desc">
-              Lectures on LLM fundamentals, evaluation, fine-tuning, and AI safety.
-              A Kaggle-style competition ran alongside a collaborative research project.
+              Lectures from practitioners on agents and evaluation, continual learning,
+              compression, and inference economics, wrapped around a week-long prediction
+              challenge.
             </p>
             <div class="cc-foot">
-              <a class="btn-link-v3" href="/summer-school/2025/">
+              <a class="btn-link-v3" href="/summer-school/2026/">
                 See the highlights <span class="arrow">→</span>
               </a>
             </div>
@@ -184,8 +185,14 @@ import Partners from '../components/Partners.astro';
 
         <article class="materials-card">
           <div class="m-tag">Past schools</div>
-          <h3 class="m-title">Three years of cohorts.</h3>
+          <h3 class="m-title">Four years of cohorts.</h3>
           <ul class="m-list">
+            <li>
+              <a href="/summer-school/2026/">
+                <span>Oxford LLMs 2026</span>
+                <span class="m-meta">Highlights →</span>
+              </a>
+            </li>
             <li>
               <a href="/summer-school/2025/">
                 <span>Oxford LLMs 2025</span>
@@ -264,25 +271,28 @@ import Partners from '../components/Partners.astro';
           </a>
         </div>
 
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top:22px;">
-          <div class="inst-logo-card">
-            <img src="/img/partners/dpir_spring_school.png" alt="DPIR Spring School, University of Oxford"
-                 style="height:36px; width:auto; max-width:180px; object-fit:contain; object-position:left center; margin-bottom:12px;" />
-            <p style="margin:0; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-muted);">Oxford · DPIR</p>
-          </div>
-          <div class="inst-logo-card">
-            <img src="/img/partners/essca.png" alt="ESSCA Paris"
-                 style="height:44px; width:auto; max-width:120px; object-fit:contain; object-position:left center; margin-bottom:12px;" />
-            <p style="margin:0; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-muted);">ESSCA · Paris</p>
-          </div>
-          <div class="inst-logo-card">
-            <img src="/img/partners/eui.png" alt="European University Institute"
-                 style="height:36px; width:auto; max-width:160px; object-fit:contain; object-position:left center; margin-bottom:12px;" />
-            <p style="margin:0; font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--text-muted);">EUI · Florence</p>
+        <!-- Host institutions at full size. They stay clear of the sponsors
+             by placement and by that band's own tinted section, not by being
+             shrunk down. -->
+        <div class="taught-at">
+          <div class="taught-at-label">Also taught at</div>
+          <div class="taught-at-row">
+            <a class="inst-logo-card" href="https://www.politics.ox.ac.uk/" target="_blank" rel="noopener">
+              <img src="/img/partners/dpir_spring_school.png" alt="DPIR Methods Spring School, University of Oxford" loading="lazy" />
+              <p>Oxford · DPIR</p>
+            </a>
+            <a class="inst-logo-card" href="https://www.essca.fr/en/" target="_blank" rel="noopener">
+              <img src="/img/partners/essca.png" alt="ESSCA Paris" loading="lazy" />
+              <p>ESSCA · Paris</p>
+            </a>
+            <a class="inst-logo-card" href="https://www.eui.eu/" target="_blank" rel="noopener">
+              <img src="/img/partners/eui.png" alt="European University Institute" loading="lazy" />
+              <p>EUI · Florence</p>
+            </a>
           </div>
         </div>
 
-        <div style="margin-top:22px; display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="course-actions">
           <a class="btn-ghost" href="/course/">Course details <span class="arrow">→</span></a>
           <a class="btn-link-v3" href="https://github.com/antndlcrx/Intro-to-LLMs-DPIR"
              target="_blank" rel="noopener">Open on GitHub <span class="arrow">→</span></a>
@@ -294,7 +304,7 @@ import Partners from '../components/Partners.astro';
   <!-- ═══════════════════════════════════════════════════════════
        PARTNERS
        ═══════════════════════════════════════════════════════════ -->
-  <section class="section-v3 section-v3--marker" style="padding: clamp(36px,4vw,52px) 0;">
+  <section class="section-v3 section-tinted-v3 home-sponsors">
     <div class="shell">
       <Partners />
     </div>
@@ -304,9 +314,56 @@ import Partners from '../components/Partners.astro';
 </Base>
 
 <style>
-  /* Module-preview rows are links — inherit colour, no underline */
+  /* Module-preview rows are links, inherit colour, no underline */
   .mp-row {
     text-decoration: none;
     color: inherit;
   }
+
+  /* Photo band sitting between the hero and § 01. Enters last in the hero
+     sequence: title words run to ~0.64s, then lede 0.65s, actions 0.80s,
+     meta 0.95s, so the photograph follows at 1.1s. */
+  .home-band {
+    margin: 0 auto clamp(24px, 4vw, 48px);
+    opacity: 0; transform: translateY(14px);
+    animation: hero-rise .8s cubic-bezier(.16,.84,.32,1) 1.1s forwards;
+  }
+  /* .photo-wide is 21:9, which crops this frame down to the lectern and
+     loses the room. 16:9 keeps the screen, the speaker and the audience. */
+  .home-band .photo-wide img { aspect-ratio: 16 / 9; }
+  @media (prefers-reduced-motion: reduce) {
+    .home-band { opacity: 1 !important; transform: none !important; animation: none !important; }
+  }
+  /* The hero now runs into a photograph rather than into open page. */
+  .hero-aurora-wrap { padding-bottom: clamp(32px, 3.5vw, 48px); }
+
+  /* Host institutions at full size, in the site's existing logo-card frame.
+     What keeps them clear of the sponsors is distance and the sponsor band's
+     own tinted section, not making these smaller. */
+  .taught-at { margin-top: 30px; padding-top: 26px; border-top: 1px solid var(--border-lt); }
+  .taught-at-label {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .taught-at-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  a.inst-logo-card {
+    display: block; text-decoration: none;
+    transition: border-color .25s ease, transform .25s ease;
+  }
+  a.inst-logo-card:hover { border-color: var(--border-lt); transform: translateY(-2px); }
+  .taught-at-row img {
+    height: 40px; width: auto; max-width: 100%;
+    object-fit: contain; object-position: left center; margin-bottom: 14px;
+  }
+  .taught-at-row p {
+    margin: 0; font-family: var(--font-mono); font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted);
+  }
+  .course-actions { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+  @media (max-width: 720px) { .taught-at-row { grid-template-columns: 1fr; } }
+
+  /* Sponsors get their own tinted band with real breathing room, so they
+     are plainly a separate thing from the course credits above. */
+  .home-sponsors { padding: clamp(56px, 6.5vw, 88px) 0 clamp(48px, 5.5vw, 76px); }
 </style>

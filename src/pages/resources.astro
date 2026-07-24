@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Partners from '../components/Partners.astro';
 ---
 
 <Base
@@ -17,71 +18,83 @@ import Base from '../layouts/Base.astro';
         </div>
         <p class="lede-v3">
           Course materials, summer school archives, research code, and models.
-          All openly licensed and freely available — no registration required.
+          All openly licensed and freely available, with no registration required.
         </p>
       </div>
 
-      <!-- Primary resource cards -->
-      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
-           class="reveal-stagger">
+      <!-- Primary resource cards. Reuses the .cohort-card pattern from the
+           homepage: photo on top, body below, footer links pinned to the base. -->
+      <div class="res-grid reveal-stagger">
 
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <div class="eyebrow-v3" style="margin-bottom:12px">Course</div>
-          <h2 class="h-sub" style="margin-bottom:10px">LLMs for Social Science</h2>
-          <p class="copy" style="font-size:14px; margin:0 0 18px;">
-            Five modules from embeddings to agentic workflows. Built for
-            early-career social scientists; all notebooks run in Google Colab.
-          </p>
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
-            <a class="btn-ghost" href="/course/" style="font-size:13px; padding:8px 16px;">
-              Browse the course <span class="arrow">→</span>
-            </a>
-            <a class="btn-link-v3" href="https://github.com/antndlcrx/Intro-to-LLMs-DPIR"
-               target="_blank" rel="noopener">
-              GitHub repository <span class="arrow">→</span>
-            </a>
+        <article class="cohort-card">
+          <img src="/img/resources/course.jpg"
+               alt="Two participants working through notebooks on a laptop" loading="lazy" />
+          <div class="cc-body">
+            <span class="cc-tag">Course</span>
+            <h2 class="cc-title">LLMs for Social Science</h2>
+            <p class="cc-desc">
+              Five modules from embeddings to agentic workflows. Built for
+              early-career social scientists; all notebooks run in Google Colab.
+            </p>
+            <div class="cc-foot res-links">
+              <a class="btn-ghost" href="/course/" style="font-size:13px; padding:8px 16px;">
+                Browse the course <span class="arrow">→</span>
+              </a>
+              <a class="btn-link-v3 res-ext" href="https://github.com/antndlcrx/Intro-to-LLMs-DPIR"
+                 target="_blank" rel="noopener">
+                <img src="/img/icons/github-mark.svg" alt="" />
+                GitHub repository <span class="arrow">→</span>
+              </a>
+            </div>
           </div>
         </article>
 
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <div class="eyebrow-v3" style="margin-bottom:12px">Summer School</div>
-          <h2 class="h-sub" style="margin-bottom:10px">Workshop Archives</h2>
-          <p class="copy" style="font-size:14px; margin:0 0 18px;">
-            Lecture slides, Jupyter notebooks, and seminars from the 2023 and
-            2024 summer schools. Covers transformers, evaluation, fine-tuning,
-            and agents.
-          </p>
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
-            <a class="btn-ghost" href="/resources/summer-school/" style="font-size:13px; padding:8px 16px;">
-              Browse materials <span class="arrow">→</span>
-            </a>
-            <a class="btn-link-v3" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
-               target="_blank" rel="noopener">
-              GitHub repository <span class="arrow">→</span>
-            </a>
+        <article class="cohort-card">
+          <img src="/img/resources/archives.jpg"
+               alt="Participants in a lecture session at Nuffield College" loading="lazy" />
+          <div class="cc-body">
+            <span class="cc-tag">Summer School</span>
+            <h2 class="cc-title">Workshop Archives</h2>
+            <p class="cc-desc">
+              Lecture slides, Jupyter notebooks, and seminars from every edition
+              since 2023. Covers transformers, evaluation, fine-tuning, agents,
+              continual learning, and inference economics.
+            </p>
+            <div class="cc-foot res-links">
+              <a class="btn-ghost" href="/resources/summer-school/" style="font-size:13px; padding:8px 16px;">
+                Browse materials <span class="arrow">→</span>
+              </a>
+              <a class="btn-link-v3 res-ext" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
+                 target="_blank" rel="noopener">
+                <img src="/img/icons/github-mark.svg" alt="" />
+                GitHub repository <span class="arrow">→</span>
+              </a>
+            </div>
           </div>
         </article>
 
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <div class="eyebrow-v3" style="margin-bottom:12px">Research</div>
-          <h2 class="h-sub" style="margin-bottom:10px">Code &amp; Models</h2>
-          <p class="copy" style="font-size:14px; margin:0 0 18px;">
-            Replication code and pre-trained models from our research on
-            synthetic data generation and model evaluation. Weights hosted on
-            Hugging Face.
-          </p>
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
-            <a class="btn-ghost" href="https://github.com/Oxford-LLMs-Research/synthetic_sampling"
-               target="_blank" rel="noopener" style="font-size:13px; padding:8px 16px;">
-              Synthetic data <span class="arrow">→</span>
-            </a>
-            <a class="btn-link-v3" href="https://huggingface.co/oxford-llms"
-               target="_blank" rel="noopener">
-              Models on Hugging Face <span class="arrow">→</span>
-            </a>
+        <article class="cohort-card">
+          <img src="/img/resources/code.jpg"
+               alt="Participants writing code together during a research session" loading="lazy" />
+          <div class="cc-body">
+            <span class="cc-tag">Research</span>
+            <h2 class="cc-title">Code &amp; Models</h2>
+            <p class="cc-desc">
+              Replication code and pre-trained models from our research on
+              synthetic data generation and model evaluation. Weights hosted on
+              Hugging Face.
+            </p>
+            <div class="cc-foot res-links">
+              <a class="btn-ghost" href="https://github.com/Oxford-LLMs-Research/synthetic_sampling"
+                 target="_blank" rel="noopener" style="font-size:13px; padding:8px 16px;">
+                Synthetic data <span class="arrow">→</span>
+              </a>
+              <a class="btn-link-v3 res-ext" href="https://huggingface.co/oxford-llms"
+                 target="_blank" rel="noopener">
+                <img src="/img/icons/hf-logo.svg" alt="" />
+                Models on Hugging Face <span class="arrow">→</span>
+              </a>
+            </div>
           </div>
         </article>
 
@@ -108,7 +121,7 @@ import Base from '../layouts/Base.astro';
             <h3 class="h-sub" style="font-size:16px; margin-bottom:8px">Oxford LLMs on Hugging Face</h3>
             <p class="copy" style="font-size:13.5px; margin:0 0 14px;">
               All released models, datasets, and evaluation benchmarks in one
-              place — ready to download and use in your own research.
+              place, ready to download and use in your own research.
             </p>
             <a class="btn-link-v3" href="https://huggingface.co/oxford-llms"
                target="_blank" rel="noopener">
@@ -119,7 +132,27 @@ import Base from '../layouts/Base.astro';
         </div>
       </div>
 
+      <!-- Who pays for the open output -->
+      <div class="reveal" style="margin-top:56px; padding-top:36px; border-top:1px solid var(--border-lt);">
+        <div class="eyebrow-v3" style="margin-bottom:8px">Made possible by</div>
+        <p class="copy" style="font-size:14px; color:var(--text-sec); max-width:58ch; margin:0 0 8px;">
+          Everything on this page is free to use because these institutions and companies
+          fund the school and the research behind it.
+        </p>
+        <Partners />
+      </div>
+
     </div>
   </section>
 
 </Base>
+
+<style>
+  .res-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 900px) { .res-grid { grid-template-columns: 1fr; } }
+
+  /* Footer links inside the photo cards: stacked, pinned to the card base */
+  .res-links { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+  .res-ext { display: inline-flex; align-items: center; gap: 8px; }
+  .res-ext img { width: 15px; height: 15px; opacity: 0.75; flex: none; }
+</style>

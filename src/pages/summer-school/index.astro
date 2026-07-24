@@ -4,47 +4,56 @@ import Base from '../../layouts/Base.astro';
 
 <Base
   title="Summer School"
-  description="Oxford LLMs Summer School 2026 — a five-day intensive on LLMs for social science. 13–17 July, Nuffield College, Oxford."
+  description="The Oxford LLMs Summer School: a five-day intensive on LLMs for social science at Nuffield College, Oxford. Four editions since 2023; the 2026 school ran 13–17 July."
 >
 
-  <!-- ── Hero: date as typography ───────────────────────────── -->
+  <!-- ── Hero: the school, told in photographs ──────────────── -->
   <header class="hero-event">
     <div class="hero-rule-top"></div>
     <div class="hero-event-inner">
 
-      <div class="event-date">
-        <div class="ed-kicker">Summer School 2026</div>
-        <div class="ed-range">13&ndash;17</div>
-        <div class="ed-month">July 2026</div>
-        <div class="ed-where">
-          <span>Nuffield College</span>
-          <span style="opacity:.4; margin:0 6px;">·</span>
-          <span>Oxford</span>
-        </div>
-      </div>
-
       <div class="event-content">
+        <div class="ed-kicker">Nuffield College, Oxford</div>
         <h1 class="h-title">
           A five-day intensive for early-career social scientists
           working with language models.
         </h1>
-        <p class="lede-v3" style="margin-bottom:28px;">
+        <p class="lede-v3" style="margin-bottom:22px;">
           Mornings: technical lectures from ML practitioners and invited researchers.
           Afternoons: hands-on labs and a week-long collaborative research project.
           Tuition is free for all admitted participants.
         </p>
+
+        <p class="copy" style="margin:0 0 28px; color:var(--text-sec); max-width:56ch;">
+          The fourth edition ran 13&ndash;17 July 2026. Dates and applications for 2027
+          will be announced here.
+        </p>
+
         <div style="display:flex; gap:12px; flex-wrap:wrap;">
-          <a class="btn-primary" href="/summer-school/2026/#programme">
-            2026 programme <span class="arrow">→</span>
+          <a class="btn-primary" href="/summer-school/2026/">
+            2026 highlights <span class="arrow">→</span>
+          </a>
+          <a class="btn-ghost" href="#past">
+            Past cohorts <span class="arrow">→</span>
           </a>
         </div>
       </div>
+
+      <figure class="event-gallery">
+        <img class="eg-lead" src="/img/posts/report_2026/lecture_hall_2026.jpg"
+             alt="A lecture in progress in the Nuffield College lecture room, seen from the back" />
+        <img src="/img/posts/report_2026/research_table_2026.jpg"
+             alt="A team working together at a long table during an afternoon research session" />
+        <img src="/img/posts/report_2026/social_2026.jpg"
+             alt="Participants working and talking informally in a college common room" />
+        <figcaption>Oxford LLMs 2026, Nuffield College</figcaption>
+      </figure>
 
     </div>
   </header>
 
   <!-- ── Stats ──────────────────────────────────────────────── -->
-  <section style="padding: clamp(48px,6vw,80px) 0 clamp(40px,5vw,64px);">
+  <section style="padding: clamp(20px,2.5vw,36px) 0 clamp(40px,5vw,64px);">
     <div class="shell">
       <div class="stats-v3 reveal">
         <div class="stat-v3">
@@ -73,7 +82,7 @@ import Base from '../../layouts/Base.astro';
     <div class="shell">
       <div class="section-head-v3 reveal">
         <div>
-          <div class="eyebrow-v3" style="margin-bottom:14px">Three years in</div>
+          <div class="eyebrow-v3" style="margin-bottom:14px">Four years in</div>
           <h2 class="h-section">A participant-to-co-author pipeline.</h2>
         </div>
         <p class="lede-v3">
@@ -84,6 +93,24 @@ import Base from '../../layouts/Base.astro';
       </div>
 
       <div class="cohort-timeline reveal">
+
+        <a class="cohort-entry" href="/summer-school/2026/">
+          <div class="ce-content">
+            <span class="ce-year">2026</span>
+            <span class="ce-edition">Fourth edition · July 2026</span>
+            <h3 class="ce-title">Six teams. A week-long common-task challenge.</h3>
+            <p class="ce-desc">
+              A technical programme taught by practitioners from Meta, Nebius, and Liquid.AI,
+              wrapped around the AI Respondents Challenge: six teams predicting individual survey
+              responses, scored on progressively harder held-out data through the week.
+            </p>
+            <span class="btn-link-v3">Read the 2026 highlights <span class="arrow">→</span></span>
+          </div>
+          <div class="ce-photo">
+            <img src="/img/posts/report_2026/group_photo_2026.jpg"
+                 alt="Oxford LLMs 2026 cohort at Nuffield College" />
+          </div>
+        </a>
 
         <a class="cohort-entry" href="/summer-school/2025/">
           <div class="ce-content">
@@ -96,7 +123,7 @@ import Base from '../../layouts/Base.astro';
               A team of participants and speakers continued the work after September and submitted
               it for peer review.
             </p>
-            <span class="btn-link-v3">Read the 2025 report <span class="arrow">→</span></span>
+            <span class="btn-link-v3">Read the 2025 highlights <span class="arrow">→</span></span>
           </div>
           <div class="ce-photo">
             <img src="/img/posts/report_2025/group_photo_2025.jpg"
@@ -114,7 +141,7 @@ import Base from '../../layouts/Base.astro';
               A cross-discipline line-up of NLP engineers, social scientists, and
               practitioners from Qdrant, Ori Cloud, Arize, and Google.
             </p>
-            <span class="btn-link-v3">Read the 2024 report <span class="arrow">→</span></span>
+            <span class="btn-link-v3">Read the 2024 highlights <span class="arrow">→</span></span>
           </div>
           <div class="ce-photo">
             <img src="/img/posts/report_2024/group_llms_2024.jpg"
@@ -132,7 +159,7 @@ import Base from '../../layouts/Base.astro';
               researchers exploring transformers, text-as-data methods, and the emerging
               landscape of large language models.
             </p>
-            <span class="btn-link-v3">Read the 2023 report <span class="arrow">→</span></span>
+            <span class="btn-link-v3">Read the 2023 highlights <span class="arrow">→</span></span>
           </div>
           <div class="ce-photo">
             <img src="/img/posts/report_2023/group_llms_2023.jpg"
@@ -157,16 +184,45 @@ import Base from '../../layouts/Base.astro';
         <p class="lede-v3">
           All lecture slides and coding materials are published openly after each edition.
           Datasets and model checkpoints from collaborative research projects are on Hugging Face.
+          Materials go up as speakers clear them, and we are editing the lecture and research talk
+          recordings for open release. Watch this space.
         </p>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 20px;"
            class="reveal-stagger">
 
         <article class="fb">
           <span class="rule-soft"></span>
-          <div class="eyebrow-v3" style="margin-bottom:10px">2023 · Inaugural</div>
-          <h3 class="h-sub" style="margin-bottom:14px">Slides &amp; notebooks</h3>
+          <div class="eyebrow-v3" style="margin-bottom:10px">2026 · Fourth edition</div>
+          <h3 class="h-sub" style="margin-bottom:14px">Lecture slides &amp; challenge</h3>
+          <p class="copy" style="margin:0 0 14px; font-size:13px; color:var(--text-muted);">
+            Lectures on agents and evaluation, continual learning, and LLM data and RL environments,
+            plus the AI Respondents Challenge dataset and starter kit. More sessions are being
+            cleared for release.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <a class="btn-link-v3" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
+               target="_blank" rel="noopener" style="display:flex; align-items:center; gap:7px;">
+              <img src="/img/icons/github-mark.svg" alt="" style="width:15px; height:15px; opacity:0.75; flex-shrink:0;">
+              GitHub repository <span class="arrow">→</span>
+            </a>
+            <a class="btn-link-v3" href="https://huggingface.co/datasets/oxford-llms/ai-respondents-challenge"
+               target="_blank" rel="noopener" style="display:flex; align-items:center; gap:7px;">
+              <img src="/img/icons/hf-logo.svg" alt="" style="width:15px; height:15px; flex-shrink:0;">
+              Challenge dataset <span class="arrow">→</span>
+            </a>
+          </div>
+        </article>
+
+        <article class="fb">
+          <span class="rule-soft"></span>
+          <div class="eyebrow-v3" style="margin-bottom:10px">2025 · Third edition</div>
+          <h3 class="h-sub" style="margin-bottom:14px">Coding seminars</h3>
+          <p class="copy" style="margin:0 0 14px; font-size:13px; color:var(--text-muted);">
+            Hands-on notebooks on LLM fundamentals and on post-training: supervised fine-tuning,
+            DPO, and GRPO. Remaining lecture slides are being collected from speakers.
+          </p>
           <a class="btn-link-v3" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
              target="_blank" rel="noopener" style="display:flex; align-items:center; gap:7px;">
             <img src="/img/icons/github-mark.svg" alt="" style="width:15px; height:15px; opacity:0.75; flex-shrink:0;">
@@ -194,11 +250,13 @@ import Base from '../../layouts/Base.astro';
 
         <article class="fb">
           <span class="rule-soft"></span>
-          <div class="eyebrow-v3" style="margin-bottom:10px">2025 · Third edition</div>
-          <h3 class="h-sub" style="margin-bottom:14px">Slides, notebooks &amp; datasets</h3>
-          <p class="copy" style="margin:0; font-size:13px; color:var(--text-muted);">
-            Materials are being uploaded and will appear here shortly.
-          </p>
+          <div class="eyebrow-v3" style="margin-bottom:10px">2023 · Inaugural</div>
+          <h3 class="h-sub" style="margin-bottom:14px">Slides &amp; notebooks</h3>
+          <a class="btn-link-v3" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
+             target="_blank" rel="noopener" style="display:flex; align-items:center; gap:7px;">
+            <img src="/img/icons/github-mark.svg" alt="" style="width:15px; height:15px; opacity:0.75; flex-shrink:0;">
+            GitHub repository <span class="arrow">→</span>
+          </a>
         </article>
 
       </div>

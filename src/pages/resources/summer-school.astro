@@ -1,10 +1,181 @@
 ---
 import Base from '../../layouts/Base.astro';
+
+// Materials are grouped by edition and shown one edition at a time via the
+// same CSS-only radio-tab pattern the challenge leaderboard uses. Four
+// editions stacked vertically made for a very deep, uniform page.
+const editions = [
+  {
+    id: '2026',
+    label: '2026',
+    title: 'Fourth edition',
+    date: 'July 2026',
+    photo: '/img/posts/report_2026/group_photo_2026.jpg',
+    alt: 'Oxford LLMs 2026 cohort at Nuffield College',
+    blurb: `Agents and how to evaluate them, continual learning and why models forget, and how
+            training data, evaluations, and RL environments shape model behaviour. Efficiency runs
+            through the year: compression, self-hosted serving, and the economics of inference.
+            The challenge materials add a survey-prediction dataset and a working baseline pipeline.`,
+    counts: ['3 lecture decks', '1 research talk', 'Dataset + starter kit'],
+    columns: [
+      {
+        heading: 'Lectures',
+        items: [
+          { title: 'LLM Agents and Evaluation', by: 'Tatiana Shavrina', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2026/LLM%20Agents%20and%20Evaluation%20-%20Tatiana%20Shavrina.pdf' },
+          { title: 'Continual Learning: Why Models Forget, and What We Can Do About It', by: 'Sagi Shaier', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2026/Continual%20Learning%20-%20Sagi%20Shaier.pdf' },
+          { title: 'From Web Data to Verifiable Worlds', by: 'Ibragim Badertdinov', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2026/From%20Web%20Data%20to%20Verifiable%20Worlds%20-%20Ibragim%20Badertdinov.pdf' },
+          { title: 'Efficient LLMs: Principles and Compression Techniques', by: 'Ilya Boytsov', badge: 'Soon' },
+          { title: 'The Economics of LLM Inference', by: 'Piotr Mazurek', badge: 'Soon' },
+          { title: 'From Days to Hours: Accelerating LLM-Driven Research', by: 'Sergei Skvortsov', badge: 'Soon' },
+        ],
+      },
+      {
+        heading: 'Research talks & challenge',
+        items: [
+          { title: 'Replication with Language Models', by: 'Christopher Barrie', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/talks/2026/Replication%20with%20Language%20Models%20-%20Christopher%20Barrie.pdf' },
+          { title: 'Talks by Margaret Roberts, Andreu Casas, Elliott Ash, and Roberto-Rafael Maura-Rivero', by: 'Slides being cleared for release', badge: 'Soon' },
+          { title: 'AI Respondents Challenge dataset', by: 'Train, test, targets, and the feature pool', badge: 'Data',
+            href: 'https://huggingface.co/datasets/oxford-llms/ai-respondents-challenge' },
+          { title: 'Challenge starter kit', by: 'Colab-ready baseline pipeline', badge: 'Repo',
+            href: 'https://github.com/Oxford-LLMs-Research/ai-respondents-challenge' },
+          { title: 'Final leaderboard', by: 'All tiers, including the held-out surveys', badge: 'Board',
+            href: '/research/challenge/' },
+        ],
+      },
+    ],
+  },
+  {
+    id: '2025',
+    label: '2025',
+    title: 'Third edition',
+    date: 'September 2025',
+    photo: '/img/posts/report_2025/group_photo_2025.jpg',
+    alt: 'Oxford LLMs 2025 cohort at Nuffield College',
+    blurb: `Foundations you can run: tokenization, chat templates, decoding strategies, and
+            attention, then post-training end to end, from supervised fine-tuning through preference
+            optimisation and GRPO, with datasets and training code included.`,
+    counts: ['2 seminar notebooks', 'Lecture slides pending'],
+    columns: [
+      {
+        heading: 'Seminars',
+        items: [
+          { title: 'LLM Fundamentals', by: 'Pretraining data, tokenization, chat templates, decoding, attention', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2025/%5Bseminar%5D_LLM_Fundamentals.ipynb' },
+          { title: 'Post-training: SFT, DPO, and GRPO', by: 'Notebook, datasets, and training code', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/tree/main/materials/seminars/2025/post_training' },
+        ],
+      },
+      {
+        heading: 'Lectures',
+        note: 'Slides are being collected from speakers and will appear here.',
+        items: [
+          { title: 'Burtsev · Dral · Boytsov · Sapunov · Shavrina · Skvortsov · Volk', by: 'Seven lecturers across the week', badge: 'Soon' },
+        ],
+      },
+    ],
+  },
+  {
+    id: '2024',
+    label: '2024',
+    title: 'Second edition',
+    date: 'September 2024',
+    photo: '/img/posts/report_2024/group_llms_2024.jpg',
+    alt: 'Oxford LLMs 2024 cohort at Nuffield College',
+    blurb: `Model architecture, evaluation, and agent-based systems, with fine-tuning and alignment
+            covered in depth. Applied sessions turn to retrieval-augmented generation for social
+            science, observability for LLM pipelines, and the practicalities of self-hosting.`,
+    counts: ['5 lectures', '5 seminars'],
+    columns: [
+      {
+        heading: 'Lectures',
+        items: [
+          { title: 'Introduction to LLMs', by: 'Grigory Sapunov', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1avuQJE-Gf8t0an-sinXqkvKjzv1u4rLpO94ONOE_Vx4/edit#slide=id.p' },
+          { title: 'LLM Evaluation', by: 'Tatiana Shavrina', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1n_wwOPwbK9FPkVMKGA9Vneya4Jaf4lh13D9YO9byves/edit#slide=id.g303d6023e88_1_58' },
+          { title: 'LLM Agents', by: 'Tatiana Shavrina', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/10-6Erne_Fo62y2i4OOEaNkGTrcEEIk9sOObuSJlhR80/edit#slide=id.g303d938f784_1_58' },
+          { title: 'LLM Agents (continued)', by: 'Grigory Sapunov', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1Zlt3ARDbGBhVvmPaz7omaj6MlXIlIOFs7wm6P8GGrpc/edit#slide=id.p' },
+          { title: 'Fine-Tuning and Alignment', by: 'Ilya Boytsov', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1-Kf059z24W65GgPNbjw6vOvABFOdxFf4BD_Hsenc-U8/edit' },
+        ],
+      },
+      {
+        heading: 'Seminars',
+        items: [
+          { title: 'Navigating RAG for Social Science', by: 'Atita Arora', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1ngAVq0Ks3_rgDw5Qnif_A483G6M6RoL2shVklabrYDI/edit#slide=id.g1ff45be8172_1_0' },
+          { title: 'LLM Observability and Evaluation', by: 'John Githuly', badge: 'Slides',
+            href: 'https://docs.google.com/presentation/d/1wCGSwBqo4iNx_MQXwQLHRyVW__t8UlMU9K6HPLmq4hM/edit#slide=id.g2f39ad35ae4_0_641' },
+          { title: 'Tutorial: Creating Llama-Researcher', by: 'John Githuly', badge: 'Repo',
+            href: 'https://github.com/Jgilhuly/Llama-Researcher' },
+          { title: 'Gemini Model Deep Dive', by: 'Christian Silva', badge: 'Soon' },
+          { title: "ORI's Guide to Self-Hosting LLMs", by: 'Ciera Fowler', badge: 'Soon' },
+        ],
+      },
+    ],
+  },
+  {
+    id: '2023',
+    label: '2023',
+    title: 'Inaugural edition',
+    date: 'September 2023',
+    photo: '/img/posts/report_2023/group_llms_2023.jpg',
+    alt: 'Oxford LLMs 2023 inaugural cohort at Nuffield College',
+    blurb: `Transformers from the ground up, interpretability and bias, and alignment. The notebooks
+            remain a solid starting point: topic modelling, text classification, parameter-efficient
+            fine-tuning, model analysis with spaCy, and detoxification with RLHF.`,
+    counts: ['3 lectures', '9 notebooks'],
+    columns: [
+      {
+        heading: 'Lectures',
+        note: 'All lectures by Elena Voita.',
+        items: [
+          { title: 'The Evolutionary Journey of NLP', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/The%20Evolutionary%20Journey%20in%20NLP.pdf' },
+          { title: 'Bias in LLMs and Interpretability', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/Bias%20in%20LLMs%20and%20interpretability.pdf' },
+          { title: 'LLMs and Alignment', badge: 'PDF',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/Prompt%20engineering%2C%20RHLF%2C%20ChatGPT.pdf' },
+        ],
+      },
+      {
+        heading: 'Seminars',
+        note: 'All workshops by Ilya Boytsov.',
+        items: [
+          { title: 'Environment setup and intro', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/0_Env%20setup%20and%20intro.ipynb' },
+          { title: 'Introduction to Hugging Face transformers', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/1_Intro%20to%20transformers.ipynb' },
+          { title: 'Topic modelling with BERTopic', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/2_Topic%20modelling%20with%20transformers.ipynb' },
+          { title: 'Fine-tuning for classification', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/3_Fine%20tune%20pretrained%20model.ipynb' },
+          { title: 'Parameter Efficient Fine Tuning (PEFT)', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/4_Parameter%20efficient%20fine%20tuning.ipynb' },
+          { title: 'Transformers interpretability', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/5_Transformers%20interpretability.ipynb' },
+          { title: 'Model analysis with spaCy', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/6_Sentiment%20analysis%20with%20classic%20NLP.ipynb' },
+          { title: 'Prompts and instructions with Llama 2', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_3/7_Prompts%20and%20instructions%20with%20Llama%202.ipynb' },
+          { title: 'Detoxifying summarisation with RLHF', badge: 'Notebook',
+            href: 'https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_3/8_LLMs%20alignment%20with%20RLHF.ipynb' },
+        ],
+      },
+    ],
+  },
+];
 ---
 
 <Base
   title="Summer School Materials"
-  description="Lecture slides, workshops, and practical guides from the Oxford LLMs summer school."
+  description="Lecture slides, notebooks, datasets, and workshop materials from every edition of the Oxford LLMs summer school."
 >
 
   <aside class="status-strip" aria-label="Page breadcrumb">
@@ -15,7 +186,7 @@ import Base from '../../layouts/Base.astro';
     </div>
   </aside>
 
-  <section class="section-v3" style="padding-top: clamp(72px, 8vw, 112px); padding-bottom: clamp(56px, 7vw, 88px);">
+  <section class="section-v3" style="padding-top: clamp(56px, 6vw, 88px); padding-bottom: clamp(56px, 7vw, 88px);">
     <div class="shell">
 
       <div class="section-head-v3 reveal">
@@ -24,159 +195,77 @@ import Base from '../../layouts/Base.astro';
           <h1 class="h-section">Workshop Materials</h1>
         </div>
         <p class="lede-v3">
-          Lecture slides, Jupyter notebooks, and workshop materials from the Oxford LLMs
-          summer schools. All openly available — no registration required.
+          Lecture slides, notebooks, and datasets from every edition since 2023.
+          Openly available, no registration required.
         </p>
       </div>
 
-      <!-- 2024 -->
-      <div class="reveal" style="margin-top:48px; padding-top:32px; border-top:1px solid var(--border);">
-        <div class="eyebrow-v3" style="margin-bottom:20px">2024 · Second edition</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-
-          <article class="fb">
-            <span class="rule-soft"></span>
-            <h3 class="h-sub" style="margin-bottom:16px">Lectures</h3>
-            <ul class="mat-list">
-              <li>
-                <a href="https://docs.google.com/presentation/d/1avuQJE-Gf8t0an-sinXqkvKjzv1u4rLpO94ONOE_Vx4/edit#slide=id.p"
-                   target="_blank" rel="noopener">Introduction to LLMs</a>
-                <span class="mat-speaker">Grigory Sapunov</span>
-              </li>
-              <li>
-                <a href="https://docs.google.com/presentation/d/1n_wwOPwbK9FPkVMKGA9Vneya4Jaf4lh13D9YO9byves/edit#slide=id.g303d6023e88_1_58"
-                   target="_blank" rel="noopener">LLM Evaluation</a>
-                <span class="mat-speaker">Tatiana Shavrina</span>
-              </li>
-              <li>
-                <a href="https://docs.google.com/presentation/d/10-6Erne_Fo62y2i4OOEaNkGTrcEEIk9sOObuSJlhR80/edit#slide=id.g303d938f784_1_58"
-                   target="_blank" rel="noopener">LLM Agents</a>
-                <span class="mat-speaker">Tatiana Shavrina</span>
-              </li>
-              <li>
-                <a href="https://docs.google.com/presentation/d/1Zlt3ARDbGBhVvmPaz7omaj6MlXIlIOFs7wm6P8GGrpc/edit#slide=id.p"
-                   target="_blank" rel="noopener">LLM Agents (continued)</a>
-                <span class="mat-speaker">Grigory Sapunov</span>
-              </li>
-              <li>
-                <a href="https://docs.google.com/presentation/d/1-Kf059z24W65GgPNbjw6vOvABFOdxFf4BD_Hsenc-U8/edit"
-                   target="_blank" rel="noopener">Fine-Tuning and Alignment</a>
-                <span class="mat-speaker">Ilya Boytsov</span>
-              </li>
-            </ul>
-          </article>
-
-          <article class="fb">
-            <span class="rule-soft"></span>
-            <h3 class="h-sub" style="margin-bottom:16px">Seminars</h3>
-            <ul class="mat-list">
-              <li>
-                <a href="https://docs.google.com/presentation/d/1ngAVq0Ks3_rgDw5Qnif_A483G6M6RoL2shVklabrYDI/edit#slide=id.g1ff45be8172_1_0"
-                   target="_blank" rel="noopener">Navigating RAG for Social Science</a>
-                <span class="mat-speaker">Atita Arora</span>
-              </li>
-              <li>
-                <a href="https://docs.google.com/presentation/d/1wCGSwBqo4iNx_MQXwQLHRyVW__t8UlMU9K6HPLmq4hM/edit#slide=id.g2f39ad35ae4_0_641"
-                   target="_blank" rel="noopener">LLM Observability and Evaluation</a>
-                <span class="mat-speaker">John Githuly</span>
-              </li>
-              <li>
-                <a href="https://github.com/Jgilhuly/Llama-Researcher"
-                   target="_blank" rel="noopener">Tutorial: Creating Llama-Researcher</a>
-                <span class="mat-speaker">John Githuly</span>
-              </li>
-              <li>
-                <span class="mat-title">Gemini Model Deep Dive</span>
-                <span class="mat-speaker">Christian Silva</span>
-              </li>
-              <li>
-                <span class="mat-title">ORI's Guide to Self-Hosting LLMs</span>
-                <span class="mat-speaker">Ciera Fowler</span>
-              </li>
-            </ul>
-          </article>
-
-        </div>
+      <div class="reveal mat-note">
+        <p>
+          <strong>Watch this space.</strong> Materials go up as speakers clear them for release,
+          so a session missing today may well be here next month. We are also editing the lecture
+          and research talk recordings and will publish them openly once post-production is done.
+        </p>
       </div>
 
-      <!-- 2023 -->
-      <div class="reveal" style="margin-top:40px; padding-top:32px; border-top:1px solid var(--border);">
-        <div class="eyebrow-v3" style="margin-bottom:20px">2023 · Inaugural edition</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div class="mat-switch reveal">
+        {editions.map((ed, i) => (
+          <input type="radio" name="mat-ed" id={`med-${ed.id}`} class="mat-radio" checked={i === 0} />
+        ))}
 
-          <article class="fb">
-            <span class="rule-soft"></span>
-            <h3 class="h-sub" style="margin-bottom:16px">Lectures</h3>
-            <p class="copy" style="font-size:13px; color:var(--text-dim); margin:0 0 12px;">
-              All lectures by <a href="https://lena-voita.github.io/" target="_blank" rel="noopener">Elena Voita</a>.
-            </p>
-            <ul class="mat-list">
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/The%20Evolutionary%20Journey%20in%20NLP.pdf"
-                   target="_blank" rel="noopener">The Evolutionary Journey of NLP</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/Bias%20in%20LLMs%20and%20interpretability.pdf"
-                   target="_blank" rel="noopener">Bias in LLMs and Interpretability</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/lectures/2023/Prompt%20engineering%2C%20RHLF%2C%20ChatGPT.pdf"
-                   target="_blank" rel="noopener">LLMs and Alignment</a>
-              </li>
-            </ul>
-          </article>
-
-          <article class="fb">
-            <span class="rule-soft"></span>
-            <h3 class="h-sub" style="margin-bottom:16px">Seminars</h3>
-            <p class="copy" style="font-size:13px; color:var(--text-dim); margin:0 0 12px;">
-              All workshops by <a href="https://www.linkedin.com/in/ieboytsov/" target="_blank" rel="noopener">Ilya Boytsov</a>.
-            </p>
-            <ul class="mat-list">
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/0_Env%20setup%20and%20intro.ipynb"
-                   target="_blank" rel="noopener">Environment setup and intro</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/1_Intro%20to%20transformers.ipynb"
-                   target="_blank" rel="noopener">Introduction to Hugging Face transformers</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/2_Topic%20modelling%20with%20transformers.ipynb"
-                   target="_blank" rel="noopener">Topic modelling with BERTopic</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_1/3_Fine%20tune%20pretrained%20model.ipynb"
-                   target="_blank" rel="noopener">Fine-tuning for classification</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/4_Parameter%20efficient%20fine%20tuning.ipynb"
-                   target="_blank" rel="noopener">Parameter Efficient Fine Tuning (PEFT)</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/5_Transformers%20interpretability.ipynb"
-                   target="_blank" rel="noopener">Transformers interpretability</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_2/6_Sentiment%20analysis%20with%20classic%20NLP.ipynb"
-                   target="_blank" rel="noopener">Model analysis with spaCy</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_3/7_Prompts%20and%20instructions%20with%20Llama%202.ipynb"
-                   target="_blank" rel="noopener">Prompts and instructions with Llama 2</a>
-              </li>
-              <li>
-                <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop/blob/main/materials/seminars/2023/day_3/8_LLMs%20alignment%20with%20RLHF.ipynb"
-                   target="_blank" rel="noopener">Detoxifying summarisation with RLHF</a>
-              </li>
-            </ul>
-          </article>
-
+        <div class="mat-tabs" aria-label="Edition">
+          {editions.map((ed) => (
+            <label for={`med-${ed.id}`}>
+              <span class="mt-year">{ed.label}</span>
+              <span class="mt-ed">{ed.title}</span>
+            </label>
+          ))}
         </div>
+
+        {editions.map((ed) => (
+          <div class={`mat-panel mat-panel--${ed.id}`}>
+
+            <div class="mat-intro">
+              <img src={ed.photo} alt={ed.alt} loading="lazy" />
+              <div>
+                <div class="eyebrow-v3" style="margin-bottom:12px">What's covered</div>
+                <p class="copy mat-blurb">{ed.blurb}</p>
+                <ul class="mat-counts">
+                  {ed.counts.map((c) => <li>{c}</li>)}
+                </ul>
+              </div>
+            </div>
+
+            <div class="mat-grid">
+              {ed.columns.map((col) => (
+                <article class="fb">
+                  <span class="rule-soft"></span>
+                  <h2 class="h-sub" style="margin-bottom:18px">{col.heading}</h2>
+                  {col.note && (
+                    <p class="copy" style="font-size:13px; color:var(--text-dim); margin:0 0 12px;">{col.note}</p>
+                  )}
+                  <ul class="mat-list">
+                    {col.items.map((it) => (
+                      <li>
+                        <div class="mat-head">
+                          {it.href
+                            ? <a href={it.href} target={it.href.startsWith('/') ? null : '_blank'} rel={it.href.startsWith('/') ? null : 'noopener'}>{it.title}</a>
+                            : <span class="mat-title">{it.title}</span>}
+                          <span class:list={['mat-badge', { 'mat-badge--soon': it.badge === 'Soon' }]}>{it.badge}</span>
+                        </div>
+                        {it.by && <span class="mat-speaker">{it.by}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+
+          </div>
+        ))}
       </div>
 
-      <!-- GitHub archive -->
-      <div class="reveal" style="margin-top:40px; padding-top:32px; border-top:1px solid var(--border);">
+      <div class="reveal" style="margin-top:36px; padding-top:28px; border-top:1px solid var(--border);">
         <a class="btn-link-v3" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop"
            target="_blank" rel="noopener">
           All materials on GitHub <span class="arrow">→</span>
@@ -189,31 +278,111 @@ import Base from '../../layouts/Base.astro';
 </Base>
 
 <style>
-  .mat-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .mat-note {
+    margin-top: 26px; padding: 16px 20px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 55%, var(--card));
+    max-width: 78ch;
   }
+  .mat-note p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--text-sec); }
+
+  /* Edition tabs: CSS-only, same radio pattern as the challenge leaderboard */
+  .mat-switch { margin-top: 32px; }
+  .mat-radio { position: absolute; opacity: 0; pointer-events: none; }
+  .mat-tabs {
+    display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 5px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 34px;
+  }
+  .mat-tabs label {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 9px 18px; border-radius: 8px; cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+  .mt-year {
+    font-family: var(--font-heading); font-weight: 700; font-size: 15px;
+    letter-spacing: -0.01em; color: var(--text);
+  }
+  .mt-ed {
+    font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .mat-tabs label:hover { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+
+  #med-2026:checked ~ .mat-tabs label[for='med-2026'],
+  #med-2025:checked ~ .mat-tabs label[for='med-2025'],
+  #med-2024:checked ~ .mat-tabs label[for='med-2024'],
+  #med-2023:checked ~ .mat-tabs label[for='med-2023'] { background: var(--text); }
+  #med-2026:checked ~ .mat-tabs label[for='med-2026'] .mt-year,
+  #med-2025:checked ~ .mat-tabs label[for='med-2025'] .mt-year,
+  #med-2024:checked ~ .mat-tabs label[for='med-2024'] .mt-year,
+  #med-2023:checked ~ .mat-tabs label[for='med-2023'] .mt-year { color: var(--card); }
+  #med-2026:checked ~ .mat-tabs label[for='med-2026'] .mt-ed,
+  #med-2025:checked ~ .mat-tabs label[for='med-2025'] .mt-ed,
+  #med-2024:checked ~ .mat-tabs label[for='med-2024'] .mt-ed,
+  #med-2023:checked ~ .mat-tabs label[for='med-2023'] .mt-ed { color: var(--card); opacity: 0.72; }
+
+  .mat-panel { display: none; }
+  #med-2026:checked ~ .mat-panel--2026,
+  #med-2025:checked ~ .mat-panel--2025,
+  #med-2024:checked ~ .mat-panel--2024,
+  #med-2023:checked ~ .mat-panel--2023 { display: block; }
+  .mat-radio:focus-visible ~ .mat-tabs { outline: 2px solid var(--text-sec); outline-offset: 3px; }
+
+  /* Edition intro: cohort photo beside a short description */
+  .mat-intro {
+    display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    gap: clamp(24px, 3.5vw, 40px); align-items: center; margin-bottom: 40px;
+  }
+  .mat-intro img {
+    width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block;
+    border-radius: 14px; border: 1px solid var(--border);
+  }
+  .mat-blurb { margin: 0 0 18px; font-size: 14.5px; line-height: 1.75; max-width: 62ch; }
+  .mat-counts {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .mat-counts li {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 5px 14px;
+  }
+
+  .mat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  /* Roomier than the site-wide .fb, since these cards hold dense link lists */
+  .mat-grid .fb { padding: 30px 30px 26px; }
+
+  .mat-list { list-style: none; padding: 0; margin: 0; }
   .mat-list li {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border-lt);
+    display: flex; flex-direction: column; gap: 5px;
+    padding: 14px 0; border-bottom: 1px solid var(--border-lt);
   }
+  .mat-list li:first-child { padding-top: 4px; }
   .mat-list li:last-child { border-bottom: none; }
+  .mat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
   .mat-list a {
-    font-size: 13.5px;
-    color: var(--text);
-    text-decoration: none;
+    font-size: 13.5px; line-height: 1.5; color: var(--text); text-decoration: none;
     transition: color .18s ease;
   }
   .mat-list a:hover { color: var(--accent); }
-  .mat-title { font-size: 13.5px; color: var(--text); }
+  /* Items with no link yet sit a shade back, so a linked title is visibly
+     distinct from one that is not yet clickable. */
+  .mat-title { font-size: 13.5px; line-height: 1.5; color: var(--text-sec); }
   .mat-speaker {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 0.04em;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim); letter-spacing: 0.04em;
+  }
+  .mat-badge {
+    flex: none; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px;
+  }
+  .mat-badge--soon { opacity: 0.6; }
+
+  @media (max-width: 860px) {
+    .mat-grid { grid-template-columns: 1fr; }
+    .mat-intro { grid-template-columns: 1fr; }
+    .mat-intro img { max-width: 320px; }
   }
 </style>

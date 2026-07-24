@@ -4,123 +4,96 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
 ---
 
 <Base
-  title="Oxford LLMs 2026 — Programme"
-  description="Programme, support, and speakers for the Oxford LLMs Summer School 2026 — 13–17 July, Nuffield College, Oxford."
+  title="Oxford LLMs 2026"
+  description="Oxford LLMs 2026 — fourth annual summer school on large language models for social science. Nuffield College, 13–17 July 2026."
 >
 
-  <!-- ── Manuscript hero with TOC rail ──────────────────────── -->
-  <section class="hero-manuscript">
-    <div class="hero-ms-inner">
+  <!-- ── Breadcrumb strip ───────────────────────────────────── -->
+  <aside class="status-strip" aria-label="Page breadcrumb">
+    <div class="status-strip-inner">
+      <a href="/summer-school/" style="color:inherit; text-decoration:none;">Summer School</a>
+      <span class="sep"></span>
+      <span>2026 — Fourth edition</span>
+    </div>
+  </aside>
 
-      <aside class="hero-ms-rail">
-        <span class="rail-label">2026</span>
-        <ol class="rail-toc">
-          <li>
-            <a href="#programme">
-              <span class="t-num">01</span>
-              <span class="t-name">Programme</span>
-            </a>
-          </li>
-          <li>
-            <a href="#speakers">
-              <span class="t-num">02</span>
-              <span class="t-name">Speakers</span>
-            </a>
-          </li>
-          <li>
-            <a href="#support">
-              <span class="t-num">03</span>
-              <span class="t-name">Arrangements</span>
-            </a>
-          </li>
-          <li>
-            <a href="#venue">
-              <span class="t-num">04</span>
-              <span class="t-name">Venue</span>
-            </a>
-          </li>
-        </ol>
-        <div class="rail-foot">
-          <span>13–17 July</span>
-          <span>Oxford</span>
+  <!-- ── Report hero ────────────────────────────────────────── -->
+  <div class="report-hero">
+    <div class="rh-inner">
+      <div>
+        <p class="rh-kicker">Fourth edition · July 2026</p>
+        <span class="rh-year">2026</span>
+        <p class="rh-title">Nuffield College, Oxford — five-day intensive on LLMs for social science.</p>
+        <p class="copy" style="margin:0; font-size:14.5px; color:var(--text-sec); max-width:44ch;">
+          Six research teams, eleven speakers from industry and academia, and a week-long
+          prediction challenge on survey response.
+        </p>
+      </div>
+      <div class="rh-photo">
+        <img src="/img/posts/report_2026/group_photo_2026.jpg" alt="Oxford LLMs 2026 cohort at Nuffield College" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ── § 01 About ─────────────────────────────────────────── -->
+  <section class="section-v3 section-v3--marker" id="about">
+    <span class="section-number">§ 01 · About</span>
+    <div class="shell">
+      <div class="section-head-v3 reveal">
+        <div>
+          <div class="eyebrow-v3" style="margin-bottom:14px">Fourth edition</div>
+          <h2 class="h-section">A week-long common-task challenge.</h2>
         </div>
-      </aside>
-
-      <div class="hero-ms-content">
-        <p class="eyebrow-v3">Summer School 2026</p>
-        <h1 class="hero-title h-display" style="margin: 16px 0 24px;">
-          Fourth edition.<br>Nuffield College,<br>Oxford.
-        </h1>
         <p class="lede-v3">
-          Programme details, confirmed topics, and costs and support for the 2026 school.
-          Applications are closed; applicants have been notified and this year's cohort
-          is confirmed. We look forward to welcoming participants to Nuffield College,
-          13–17 July.
+          Nuffield College hosted the fourth Oxford summer school on LLMs for social science in
+          July 2026, supported by Nuffield College and CASSM, with research support from Nebius.
+        </p>
+      </div>
+      <div class="reveal" style="max-width: 72ch;">
+        <p class="copy" style="margin: 0 0 18px;">
+          The technical programme was taught almost entirely by people who build language models for
+          a living. Sessions covered agents and evaluation, continual learning, model compression,
+          the economics of inference, cloud and self-hosted deployment, and the construction of
+          training data and reinforcement-learning environments. That is a more engineering-heavy
+          curriculum than in previous years, and a deliberate one: the questions social scientists
+          now face about these models are increasingly questions about cost, reproducibility, and
+          infrastructure, not only about prompting.
+        </p>
+        <p class="copy" style="margin: 0 0 18px;">
+          Around that ran the research project. In 2025 it occupied the final two days; in 2026 it
+          took the whole week. Teams formed on Monday morning, worked through every afternoon, and
+          presented on Friday. That is long enough to get past a first idea and into the second and
+          third, which is where the interesting work usually starts.
+        </p>
+        <p class="copy" style="margin: 0;">
+          Between the two, guest research talks from social scientists working with these methods,
+          a welcome social on Monday evening, and a guided walking tour of Oxford on the Wednesday.
+          As in previous years, several of the week's most useful conversations happened on the walk.
         </p>
       </div>
 
+      <div class="photo-spread reveal">
+        <img src="/img/posts/report_2026/teamwork_1_2026.jpg" alt="Three participants working together at a laptop during the research project" />
+        <img src="/img/posts/report_2026/teamwork_2_2026.jpg" alt="A research team working around a table at Nuffield College" />
+      </div>
+      <p class="photo-caption reveal">
+        Afternoon research sessions. Teams worked in college rooms across Nuffield through the week.
+      </p>
     </div>
   </section>
 
-  <!-- ── § 01 Programme ─────────────────────────────────────── -->
-  <section class="section-v3 section-v3--marker" id="programme">
-    <span class="section-number">§ 01 · Programme</span>
+  <!-- ── § 02 Programme ─────────────────────────────────────── -->
+  <section class="section-v3 section-v3--marker section-tinted-v3" id="programme">
+    <span class="section-number">§ 02 · Programme</span>
     <div class="shell">
       <div class="section-head-v3 reveal">
         <div>
           <div class="eyebrow-v3" style="margin-bottom:14px">13–17 July 2026</div>
-          <h2 class="h-section">The 2026 programme.</h2>
+          <h2 class="h-section">Five days at Nuffield.</h2>
         </div>
         <p class="lede-v3">
-          Five days at Nuffield College, 09:00–17:00 daily, combining technical depth with
-          research application. The week is built around three components:
-        </p>
-      </div>
-
-      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
-           class="reveal-stagger">
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Industry lectures &amp; seminars</h3>
-          <p class="copy" style="margin:0; font-size:14px;">
-            Technical foundations from practitioners building language models in industry —
-            efficient and continual learning, agents and evaluation, inference economics,
-            and LLM data and RL environments.
-          </p>
-        </article>
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Collaborative research project</h3>
-          <p class="copy" style="margin:0; font-size:14px;">
-            A Kaggle-style prediction competition on a real social science research problem.
-            Teams work through afternoon lab sessions, with guidance available from
-            industry participants.
-          </p>
-        </article>
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Social science guest talks</h3>
-          <p class="copy" style="margin:0; font-size:14px;">
-            Invited researchers present social science applications: opinion prediction,
-            document classification, and text-as-data methods, connecting the technical
-            sessions to real research problems.
-          </p>
-        </article>
-
-      </div>
-
-      <div class="section-head-v3 reveal" style="margin-top:48px;">
-        <div>
-          <div class="eyebrow-v3" style="margin-bottom:14px">Day by day</div>
-          <h2 class="h-section">The week at a glance.</h2>
-        </div>
-        <p class="lede-v3">
-          Morning lectures and seminars, afternoon group research, closing guest talks.
-          “Group research” is the participants' collaborative project work.
-          Click a speaker to jump to their profile.
+          Morning instruction, afternoon team research, closing research talks.
+          09:00–17:00 daily. Click a speaker to jump to their profile.
         </p>
       </div>
 
@@ -129,32 +102,26 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
         <div class="prog-day">
           <div class="prog-day-head">
             <span class="prog-day-date">Mon · 13 Jul</span>
+            <span class="prog-day-theme">Launch &amp; Agents</span>
           </div>
           <ol class="prog-slots">
-            <li class="prog-slot prog-break"><span class="prog-time">09:00</span><span class="prog-title">Morning Coffee</span></li>
-            <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title">Group Research Project Introduction</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">10:45</span><span class="prog-title">Coffee Break</span></li>
+            <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title">Research project launch — the AI Respondents Challenge</span></li>
             <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title"><a href="#sp-margaret-roberts">Margaret Roberts</a> — Research Talk</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">12:30</span><span class="prog-title">Lunch</span></li>
             <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title"><a href="#sp-tatiana-shavrina">Tatiana Shavrina</a> — LLM Agents and Evaluations</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">15:45</span><span class="prog-title">Coffee Break</span></li>
             <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title"><a href="#sp-roberto-maura-rivero">Roberto-Rafael Maura-Rivero</a> — Research Talk</span></li>
-            <li class="prog-slot"><span class="prog-time">19:00</span><span class="prog-title">Welcome Social</span></li>
+            <li class="prog-slot"><span class="prog-time">19:00</span><span class="prog-title">Welcome social</span></li>
           </ol>
         </div>
 
         <div class="prog-day">
           <div class="prog-day-head">
             <span class="prog-day-date">Tue · 14 Jul</span>
+            <span class="prog-day-theme">Continual Learning</span>
           </div>
           <ol class="prog-slots">
-            <li class="prog-slot prog-break"><span class="prog-time">09:00</span><span class="prog-title">Morning Coffee</span></li>
             <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title"><a href="#sp-sagi-shaier">Sagi Shaier</a> — Continual Learning: Why Models Forget, and What We Can Do About It</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">10:45</span><span class="prog-title">Coffee Break</span></li>
-            <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title">Group Research Project</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">12:30</span><span class="prog-title">Lunch</span></li>
-            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Group Research Project</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">15:45</span><span class="prog-title">Coffee Break</span></li>
+            <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title">Team research</span></li>
+            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Team research</span></li>
             <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title"><a href="#sp-christopher-barrie">Christopher Barrie</a> — Research Talk</span></li>
           </ol>
         </div>
@@ -162,90 +129,135 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
         <div class="prog-day">
           <div class="prog-day-head">
             <span class="prog-day-date">Wed · 15 Jul</span>
+            <span class="prog-day-theme">Efficiency &amp; Oxford Tour</span>
           </div>
           <ol class="prog-slots">
-            <li class="prog-slot prog-break"><span class="prog-time">09:00</span><span class="prog-title">Morning Coffee</span></li>
             <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title"><a href="#sp-ilya-boytsov">Ilya Boytsov</a> — Efficient LLMs: Principles and Compression Techniques</span></li>
-            <li class="prog-slot"><span class="prog-time">10:45</span><span class="prog-title">Oxford Walking Tour</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">12:30</span><span class="prog-title">Lunch</span></li>
-            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Group Research Project</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">15:45</span><span class="prog-title">Coffee Break</span></li>
+            <li class="prog-slot"><span class="prog-time">10:45</span><span class="prog-title">Oxford walking tour — participants &amp; speakers</span></li>
+            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Team research</span></li>
             <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title"><a href="#sp-andreu-casas">Andreu Casas</a> — Research Talk</span></li>
+            <li class="prog-slot"><span class="prog-time">Evening</span><span class="prog-title">Hidden questions released</span></li>
           </ol>
         </div>
 
         <div class="prog-day">
           <div class="prog-day-head">
             <span class="prog-day-date">Thu · 16 Jul</span>
+            <span class="prog-day-theme">Inference Economics</span>
           </div>
           <ol class="prog-slots">
-            <li class="prog-slot prog-break"><span class="prog-time">09:00</span><span class="prog-title">Morning Coffee</span></li>
             <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title"><a href="#sp-piotr-mazurek">Piotr Mazurek</a> — The Economics of LLM Inference</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">10:45</span><span class="prog-title">Coffee Break</span></li>
-            <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title"><a href="#sp-tatiana-lando">Tatiana Lando</a> — Language in LLMs: Is It Solved?</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">12:30</span><span class="prog-title">Lunch</span></li>
-            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Group Research Project</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">15:45</span><span class="prog-title">Coffee Break</span></li>
-            <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title">Group Research Project</span></li>
+            <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title">Held-out surveys released</span></li>
+            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Team research</span></li>
+            <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title">Team research</span></li>
           </ol>
         </div>
 
         <div class="prog-day">
           <div class="prog-day-head">
             <span class="prog-day-date">Fri · 17 Jul</span>
+            <span class="prog-day-theme">Data, Presentations &amp; Outro</span>
           </div>
           <ol class="prog-slots">
-            <li class="prog-slot prog-break"><span class="prog-time">09:00</span><span class="prog-title">Morning Coffee</span></li>
-            <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title"><a href="#sp-sergei-skvortsov">Sergei Skvortsov</a> — From Days to Hours: Accelerating LLM-Driven Research with Cloud and Self-Hosted Models</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">10:45</span><span class="prog-title">Coffee Break</span></li>
+            <li class="prog-slot"><span class="prog-time">09:15</span><span class="prog-title"><a href="#sp-sergei-skvortsov">Sergei Skvortsov</a> — From Days to Hours: Accelerating LLM-Driven Research</span></li>
             <li class="prog-slot"><span class="prog-time">11:00</span><span class="prog-title"><a href="#sp-ibragim-badertdinov">Ibragim Badertdinov</a> — LLM Data and RL Environments</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">12:30</span><span class="prog-title">Lunch</span></li>
-            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Group Research Project Presentations</span></li>
-            <li class="prog-slot prog-break"><span class="prog-time">15:45</span><span class="prog-title">Coffee Break</span></li>
+            <li class="prog-slot"><span class="prog-time">14:00</span><span class="prog-title">Team presentations &amp; results reveal</span></li>
             <li class="prog-slot"><span class="prog-time">16:00</span><span class="prog-title"><a href="#sp-elliott-ash">Elliott Ash</a> — Research Talk</span></li>
           </ol>
         </div>
 
       </div>
 
-      <div class="reveal" style="margin-top:28px;">
-        <p class="copy" style="color:var(--text-dim); max-width:64ch; margin:0;">
-          The programme is close to final and may still see minor adjustments.
-          For a sense of how the week runs, see the
-          <a href="/summer-school/2025/#programme">2025 programme</a>.
-          Materials from past editions are on
-          <a href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop" target="_blank" rel="noopener">GitHub</a>.
-        </p>
+      <div class="photo-wide reveal">
+        <img src="/img/posts/report_2026/lecture_2026.jpg" alt="A lecture in progress in the Nuffield College lecture room, participants at laptops" />
       </div>
     </div>
   </section>
 
-  <!-- ── § 02 Speakers ──────────────────────────────────────── -->
-  <section class="section-v3 section-v3--marker section-tinted-v3" id="speakers">
-    <span class="section-number">§ 02 · Speakers</span>
+  <!-- ── § 03 Challenge ─────────────────────────────────────── -->
+  <section class="section-v3 section-v3--marker" id="challenge">
+    <span class="section-number">§ 03 · Challenge</span>
     <div class="shell">
       <div class="section-head-v3 reveal">
         <div>
-          <div class="eyebrow-v3" style="margin-bottom:14px">Confirmed · more to follow</div>
-          <h2 class="h-section">Speakers.</h2>
+          <div class="eyebrow-v3" style="margin-bottom:14px">The research project</div>
+          <h2 class="h-section">The AI Respondents Challenge.</h2>
+        </div>
+        <p class="lede-v3">
+          Real people answered the World Values Survey. We hid some of their answers and asked six
+          teams to predict what each person said.
+        </p>
+      </div>
+
+      <div class="reveal" style="max-width: 72ch;">
+        <p class="copy" style="margin: 0 0 18px;">
+          Any method was allowed, on one condition: teams had to declare which respondent attributes
+          their pipeline actually used, and hand over the prompts they used them in. That turns a
+          week of competition into something reusable: not just a ranking, but a record of what six
+          independent groups thought would work.
+        </p>
+        <p class="copy" style="margin: 0 0 18px;">
+          Scoring widened through the week, and each new tier was released only once the previous one
+          was locked. First, held-out respondents from countries teams could study. Then countries
+          that appeared nowhere in training. Then, on Wednesday evening, four target questions nobody
+          had been told about. Finally, on Thursday morning, with the identity of the data kept
+          secret until the moment it landed, two entirely different surveys: European Social Survey
+          wave 11 and Latinobarómetro 2023, to be predicted zero-shot by a pipeline built for
+          something else.
+        </p>
+        <p class="copy" style="margin: 0;">
+          The results are worth sitting with. Every team beat majority guessing comfortably on home
+          ground, and moving to unseen countries cost them almost nothing. Moving to a different
+          survey instrument cost them most of their skill. And on Latinobarómetro questions in
+          countries the World Values Survey has never covered, every team scored worse than guessing.
+          Whatever these models have learned about how people answer survey questions travels well
+          within a European frame and poorly out of it. That is precisely the kind of finding a
+          week of adversarial evaluation is for.
+        </p>
+      </div>
+
+      <div class="photo-spread reveal">
+        <img src="/img/posts/report_2026/presentations_2026.jpg" alt="A team presenting their method at the final session, leaderboard on screen" />
+        <img src="/img/posts/report_2026/standings_2026.jpg" alt="A research team in front of the final leaderboard standings" />
+      </div>
+      <p class="photo-caption reveal">
+        Friday: team presentations and the reveal of the held-out survey results.
+      </p>
+
+      <div class="reveal" style="margin-top:28px;">
+        <a class="btn-link-v3" href="/research/challenge/">
+          Final leaderboard and rules <span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── § 04 People ────────────────────────────────────────── -->
+  <section class="section-v3 section-v3--marker section-tinted-v3" id="people">
+    <span class="section-number">§ 04 · People</span>
+    <div class="shell">
+      <div class="section-head-v3 reveal">
+        <div>
+          <div class="eyebrow-v3" style="margin-bottom:14px">Speakers &amp; organisers</div>
+          <h2 class="h-section">The people who made the week.</h2>
         </div>
       </div>
 
       <div class="speaker-grid speaker-grid--team reveal-stagger">
 
-        <button id="sp-elliott-ash" class="speaker-chip" data-speaker="elliott-ash" data-name="Elliott Ash" data-role="Associate Professor of Law, Economics & Data Science, ETH Zurich" data-tag="Research Talk" data-img="/img/speakers/elliott_ash.jpg">
-          <div class="sc-portrait"><img src="/img/speakers/elliott_ash.jpg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Elliott Ash</p><p class="sc-role">Associate Professor of Law, Economics &amp; Data Science, ETH Zurich</p></div>
+        <button class="speaker-chip" data-speaker="maksim-zubok-26" data-name="Maksim Zubok" data-role="Nuffield College, Oxford" data-tag="Organiser" data-img="/img/speakers/maksim_zubok.png">
+          <div class="sc-portrait"><img src="/img/speakers/maksim_zubok.png" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Organiser</span><p class="sc-name">Maksim Zubok</p><p class="sc-role">Nuffield College, Oxford</p></div>
         </button>
 
-        <button id="sp-ibragim-badertdinov" class="speaker-chip" data-speaker="ibragim-badertdinov" data-name="Ibragim Badertdinov" data-role="Lead Engineer, Nebius" data-tag="Lecturer" data-img="/img/speakers/ibragim_badertdinov.jpeg">
-          <div class="sc-portrait"><img src="/img/speakers/ibragim_badertdinov.jpeg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Lecturer</span><p class="sc-name">Ibragim Badertdinov</p><p class="sc-role">Lead Engineer, Nebius</p></div>
+        <button class="speaker-chip" data-speaker="josh-berry-26" data-name="Joshua Berry" data-role="Nuffield College, Oxford" data-tag="Organiser" data-img="/img/speakers/josh_berry.jpg">
+          <div class="sc-portrait"><img src="/img/speakers/josh_berry.jpg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Organiser</span><p class="sc-name">Joshua Berry</p><p class="sc-role">Nuffield College, Oxford</p></div>
         </button>
 
-        <button id="sp-christopher-barrie" class="speaker-chip" data-speaker="christopher-barrie" data-name="Christopher Barrie" data-role="Assistant Professor of Sociology, NYU" data-tag="Research Talk" data-img="/img/speakers/chris_bairre.png">
-          <div class="sc-portrait"><img src="/img/speakers/chris_bairre.png" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Christopher Barrie</p><p class="sc-role">Assistant Professor of Sociology, NYU</p></div>
+        <button class="speaker-chip" data-speaker="elodie-chervin-26" data-name="Elodie Chervin" data-role="Nuffield College, Oxford" data-tag="Organiser" data-img="/img/speakers/elodie_chervin.jpeg">
+          <div class="sc-portrait"><img src="/img/speakers/elodie_chervin.jpeg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Organiser</span><p class="sc-name">Elodie Chervin</p><p class="sc-role">Nuffield College, Oxford</p></div>
         </button>
 
         <button id="sp-ilya-boytsov" class="speaker-chip" data-speaker="ilya-boytsov-26" data-name="Ilya Boytsov" data-role="Sr. ML Engineer, Nebius" data-tag="Organiser · Lecturer" data-img="/img/speakers/ilya_boystov.jpg">
@@ -253,29 +265,14 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
           <div class="sc-info"><span class="sc-tag">Organiser · Lecturer</span><p class="sc-name">Ilya Boytsov</p><p class="sc-role">Sr. ML Engineer, Nebius</p></div>
         </button>
 
-        <button id="sp-andreu-casas" class="speaker-chip" data-speaker="andreu-casas" data-name="Andreu Casas" data-role="Incoming Associate Professor, Oxford DPIR &amp; OII" data-tag="Research Talk" data-img="/img/speakers/andreu_casas.jpg">
-          <div class="sc-portrait"><img src="/img/speakers/andreu_casas.jpg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Andreu Casas</p><p class="sc-role">Incoming Associate Professor, Oxford DPIR &amp; OII</p></div>
-        </button>
-
-        <button id="sp-tatiana-lando" class="speaker-chip" data-speaker="tatiana-lando" data-name="Tatiana Lando" data-role="Senior Research Scientist, Google DeepMind" data-tag="Lecturer" data-img="/img/speakers/tatiana_lando.jpg">
-          <div class="sc-portrait"><img src="/img/speakers/tatiana_lando.jpg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Lecturer</span><p class="sc-name">Tatiana Lando</p><p class="sc-role">Senior Research Scientist, Google DeepMind</p></div>
-        </button>
-
-        <button id="sp-roberto-maura-rivero" class="speaker-chip" data-speaker="roberto-maura-rivero" data-name="Roberto-Rafael Maura-Rivero" data-role="Research Engineer, Meta · Oxford" data-tag="Research Talk" data-img="/img/speakers/roberto_rafael_maura_rivero.jpg">
-          <div class="sc-portrait"><img src="/img/speakers/roberto_rafael_maura_rivero.jpg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Roberto-Rafael Maura-Rivero</p><p class="sc-role">Research Engineer, Meta · Oxford</p></div>
+        <button id="sp-ibragim-badertdinov" class="speaker-chip" data-speaker="ibragim-badertdinov" data-name="Ibragim Badertdinov" data-role="Lead Engineer, Nebius" data-tag="Lecturer" data-img="/img/speakers/ibragim_badertdinov.jpeg">
+          <div class="sc-portrait"><img src="/img/speakers/ibragim_badertdinov.jpeg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Lecturer</span><p class="sc-name">Ibragim Badertdinov</p><p class="sc-role">Lead Engineer, Nebius</p></div>
         </button>
 
         <button id="sp-piotr-mazurek" class="speaker-chip" data-speaker="piotr-mazurek" data-name="Piotr Mazurek" data-role="Member of Technical Staff, Liquid.AI" data-tag="Lecturer" data-img="/img/speakers/piotr_mazurek.jpg">
           <div class="sc-portrait"><img src="/img/speakers/piotr_mazurek.jpg" alt="" /></div>
           <div class="sc-info"><span class="sc-tag">Lecturer</span><p class="sc-name">Piotr Mazurek</p><p class="sc-role">Member of Technical Staff, Liquid.AI</p></div>
-        </button>
-
-        <button id="sp-margaret-roberts" class="speaker-chip" data-speaker="margaret-roberts" data-name="Margaret Roberts" data-role="Professor of Political Science, UC San Diego" data-tag="Research Talk" data-img="/img/speakers/margaret_roberts.jpg">
-          <div class="sc-portrait"><img src="/img/speakers/margaret_roberts.jpg" alt="" /></div>
-          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Margaret Roberts</p><p class="sc-role">Professor of Political Science, UC San Diego</p></div>
         </button>
 
         <button id="sp-sagi-shaier" class="speaker-chip" data-speaker="sagi-shaier" data-name="Sagi Shaier" data-role="Visiting Professor, JGU Mainz" data-tag="Lecturer" data-img="/img/speakers/sagi_shaier.jpeg">
@@ -293,118 +290,129 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
           <div class="sc-info"><span class="sc-tag">Lecturer</span><p class="sc-name">Sergei Skvortsov</p><p class="sc-role">Lead MLE, Nebius</p></div>
         </button>
 
+        <button id="sp-elliott-ash" class="speaker-chip" data-speaker="elliott-ash" data-name="Elliott Ash" data-role="Associate Professor of Law, Economics &amp; Data Science, ETH Zurich" data-tag="Research Talk" data-img="/img/speakers/elliott_ash.jpg">
+          <div class="sc-portrait"><img src="/img/speakers/elliott_ash.jpg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Elliott Ash</p><p class="sc-role">Associate Professor of Law, Economics &amp; Data Science, ETH Zurich</p></div>
+        </button>
+
+        <button id="sp-christopher-barrie" class="speaker-chip" data-speaker="christopher-barrie" data-name="Christopher Barrie" data-role="Assistant Professor of Sociology, NYU" data-tag="Research Talk" data-img="/img/speakers/chris_bairre.png">
+          <div class="sc-portrait"><img src="/img/speakers/chris_bairre.png" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Christopher Barrie</p><p class="sc-role">Assistant Professor of Sociology, NYU</p></div>
+        </button>
+
+        <button id="sp-andreu-casas" class="speaker-chip" data-speaker="andreu-casas" data-name="Andreu Casas" data-role="Associate Professor, Oxford DPIR &amp; OII" data-tag="Research Talk" data-img="/img/speakers/andreu_casas.jpg">
+          <div class="sc-portrait"><img src="/img/speakers/andreu_casas.jpg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Andreu Casas</p><p class="sc-role">Associate Professor, Oxford DPIR &amp; OII</p></div>
+        </button>
+
+        <button id="sp-roberto-maura-rivero" class="speaker-chip" data-speaker="roberto-maura-rivero" data-name="Roberto-Rafael Maura-Rivero" data-role="Research Engineer, Meta · Oxford" data-tag="Research Talk" data-img="/img/speakers/roberto_rafael_maura_rivero.jpg">
+          <div class="sc-portrait"><img src="/img/speakers/roberto_rafael_maura_rivero.jpg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Roberto-Rafael Maura-Rivero</p><p class="sc-role">Research Engineer, Meta · Oxford</p></div>
+        </button>
+
+        <button id="sp-margaret-roberts" class="speaker-chip" data-speaker="margaret-roberts" data-name="Margaret Roberts" data-role="Professor of Political Science, UC San Diego" data-tag="Research Talk" data-img="/img/speakers/margaret_roberts.jpg">
+          <div class="sc-portrait"><img src="/img/speakers/margaret_roberts.jpg" alt="" /></div>
+          <div class="sc-info"><span class="sc-tag">Research Talk</span><p class="sc-name">Margaret Roberts</p><p class="sc-role">Professor of Political Science, UC San Diego</p></div>
+        </button>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── § 05 Materials ─────────────────────────────────────── -->
+  <section class="section-v3 section-v3--marker" id="materials"
+           style="padding-bottom: clamp(56px, 7vw, 88px);">
+    <span class="section-number">§ 05 · Materials</span>
+    <div class="shell">
+      <div class="section-head-v3 reveal">
+        <div>
+          <div class="eyebrow-v3" style="margin-bottom:14px">Open access</div>
+          <h2 class="h-section">Slides, data, and the final leaderboard.</h2>
+        </div>
+        <p class="lede-v3">
+          Lecture slides, the challenge dataset, and the starter pipeline are published openly.
+          More is still landing; see below.
+        </p>
       </div>
 
-      <div class="reveal" style="margin-top:32px;">
-        <p class="copy" style="color:var(--text-dim); max-width:52ch; margin:0 0 12px;">
-          More speakers will be announced as confirmations land. If you are interested in
-          contributing as a speaker or social science presenter, reach out directly.
-        </p>
-        <a class="btn-link-v3" href="mailto:oxford@llmsforsocialscience.net">
-          Get in touch <span class="arrow">→</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;" class="reveal-stagger">
+        <a class="fb" href="https://github.com/Oxford-LLMs-Research/oxford-llms-workshop" target="_blank" rel="noopener" style="display:block;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <img src="/img/icons/github-mark.svg" alt="" style="width:24px; height:24px; opacity:0.85;">
+            <h3 class="h-sub" style="margin:0;">Workshop materials</h3>
+          </div>
+          <p class="copy" style="margin:0 0 12px; font-size:14px;">
+            Lecture slides and notebooks from the 2026 edition, alongside previous years.
+          </p>
+          <span class="btn-link-v3">Open on GitHub <span class="arrow">→</span></span>
+        </a>
+
+        <a class="fb" href="https://github.com/Oxford-LLMs-Research/ai-respondents-challenge" target="_blank" rel="noopener" style="display:block;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <img src="/img/icons/github-mark.svg" alt="" style="width:24px; height:24px; opacity:0.85;">
+            <h3 class="h-sub" style="margin:0;">Challenge starter kit</h3>
+          </div>
+          <p class="copy" style="margin:0 0 12px; font-size:14px;">
+            The Colab-ready pipeline teams built on: load the data, prompt a model, write a submission.
+          </p>
+          <span class="btn-link-v3">Open on GitHub <span class="arrow">→</span></span>
+        </a>
+
+        <a class="fb" href="https://huggingface.co/datasets/oxford-llms/ai-respondents-challenge" target="_blank" rel="noopener" style="display:block;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <img src="/img/icons/hf-logo.svg" alt="" style="width:24px; height:24px;">
+            <h3 class="h-sub" style="margin:0;">Challenge dataset</h3>
+          </div>
+          <p class="copy" style="margin:0 0 12px; font-size:14px;">
+            Training respondents, the permitted feature pool, target questions, and the test set.
+          </p>
+          <span class="btn-link-v3">Open on Hugging Face <span class="arrow">→</span></span>
+        </a>
+
+        <a class="fb" href="/research/challenge/" style="display:block;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+            <span style="width:8px;height:8px;border-radius:999px;background:var(--c-b);display:inline-block;flex:none;"></span>
+            <h3 class="h-sub" style="margin:0;">Final leaderboard</h3>
+          </div>
+          <p class="copy" style="margin:0 0 12px; font-size:14px;">
+            All tiers, including the held-out surveys revealed on the Friday of the school.
+          </p>
+          <span class="btn-link-v3">View the standings <span class="arrow">→</span></span>
         </a>
       </div>
-    </div>
-  </section>
 
-  <!-- ── § 03 Arrangements ──────────────────────────────────── -->
-  <section class="section-v3 section-v3--marker" id="support"
-           style="padding-bottom: clamp(56px, 7vw, 88px);">
-    <span class="section-number">§ 03 · Arrangements</span>
-    <div class="shell">
-      <div class="section-head-v3 reveal">
-        <div>
-          <div class="eyebrow-v3" style="margin-bottom:14px">Costs &amp; funding</div>
-          <h2 class="h-section">Tuition is free.<br>We aim to remove every barrier we can.</h2>
-        </div>
-        <p class="lede-v3">
-          The school is designed so that cost is not a barrier. All tuition is free for admitted
-          participants.
+      <div class="reveal" style="margin-top:28px; max-width:66ch;">
+        <p class="copy" style="margin:0; color:var(--text-sec); font-size:14.5px;">
+          <strong>Watch this space.</strong> Materials go up as speakers clear them for release, so
+          a session missing today may well be there next month. We are also editing the lecture and
+          research talk recordings from the week and will publish them openly once post-production
+          is done.
         </p>
       </div>
 
-      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px;"
-           class="reveal-stagger">
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Tuition</h3>
-          <p class="copy" style="margin:0; font-size:14px;">
-            The full programme (lectures, seminars, coding labs, and research project
-            support) is free of charge for all admitted participants.
-          </p>
-        </article>
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Accommodation &amp; meals</h3>
-          <p class="copy" style="margin:0 0 10px; font-size:14px;">
-            Accommodation is at participants' own expense. Admitted participants will receive
-            a list of recommended nearby hotels and affordable options in Oxford.
-          </p>
-          <p class="copy" style="margin:0; font-size:14px;">
-            We expect to cover meals during the school day; details will be confirmed
-            with admitted participants.
-          </p>
-        </article>
-
-        <article class="fb">
-          <span class="rule-soft"></span>
-          <h3 class="h-sub" style="margin-bottom:10px">Travel scholarships</h3>
-          <p class="copy" style="margin:0; font-size:14px;">
-            We have offered travel support in previous editions, but travel scholarships
-            are not available for 2026. Tuition remains free for all admitted participants.
-          </p>
-        </article>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ── § 04 Venue ─────────────────────────────────────────── -->
-  <section class="section-v3 section-v3--marker section-tinted-v3" id="venue"
-           style="padding-bottom: clamp(56px, 7vw, 88px);">
-    <span class="section-number">§ 04 · Venue</span>
-    <div class="shell">
-      <div class="section-head-v3 reveal">
-        <div>
-          <div class="eyebrow-v3" style="margin-bottom:14px">Nuffield College</div>
-          <h2 class="h-section">Where we will meet.</h2>
-        </div>
-        <p class="lede-v3">
-          All sessions take place at Nuffield College, in central Oxford.
-          Visitors should use the main entrance on Worcester Street, a short walk from Oxford train station.
-        </p>
-      </div>
-
-      <div class="venue-block reveal">
-        <div class="venue-info">
-          <p class="copy" style="margin:0 0 14px; font-size:15px; line-height:1.6;">
-            <a href="https://www.nuffield.ox.ac.uk/" target="_blank" rel="noopener">Nuffield College</a><br>
-            New Road &amp; Worcester Street<br>
-            Oxford OX1 1NF<br>
-            United Kingdom
-          </p>
-          <a class="btn-link-v3"
-             href="https://www.openstreetmap.org/?mlat=51.7528&mlon=-1.2629#map=17/51.7528/-1.2629"
-             target="_blank" rel="noopener">
-            Open in OpenStreetMap <span class="arrow">→</span>
-          </a>
-        </div>
-        <div class="venue-map">
-          <iframe
-            title="Map showing Nuffield College, Oxford"
-            src="https://www.openstreetmap.org/export/embed.html?bbox=-1.2680%2C51.7505%2C-1.2578%2C51.7552&layer=mapnik&marker=51.7528%2C-1.2629"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
+      <div class="reveal" style="margin-top:40px; display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+        <a class="btn-ghost" href="/summer-school/2025/">← 2025 edition</a>
+        <a class="btn-primary" href="/summer-school/">All cohorts <span class="arrow">→</span></a>
       </div>
     </div>
   </section>
 
   <!-- ── Bio data (used by speaker modal) ───────────────────── -->
   <div hidden aria-hidden="true">
+
+    <div id="bio-maksim-zubok-26">
+      <p>Maksim Zubok is a doctoral candidate in Politics at Oxford University, <a href="https://www.nuffield.ox.ac.uk/people/profiles/maksim-zubok/" target="_blank" rel="noopener">Nuffield College</a>. His dissertation explores ways of harnessing LLMs for social science research, from classic data labelling to using models as condensed snapshots of the internet to study how people organise relationships between concepts and form beliefs about the world.</p>
+      <p>He conceived and organised the inaugural school in 2023 and has led the programme through each edition since.</p>
+    </div>
+
+    <div id="bio-josh-berry-26">
+      <p>Joshua Berry is a DPhil candidate in Politics at Nuffield College, University of Oxford. His research combines insights from computational social science, behavioural economics, and networks to study political economy, regulatory enforcement, and judicial systems in advanced democratic countries.</p>
+      <p>More broadly, he is interested in developing experimental, machine learning, and computational methodologies for social science research.</p>
+    </div>
+
+    <div id="bio-elodie-chervin-26">
+      <p>Elodie Chervin is a DPhil candidate in Economics at Nuffield College, University of Oxford.</p>
+    </div>
 
     <div id="bio-elliott-ash">
       <p>Elliott Ash is Associate Professor of Law, Economics, and Data Science at <a href="https://ethz.ch/" target="_blank" rel="noopener">ETH Zurich</a>'s <a href="https://lawecon.ethz.ch/" target="_blank" rel="noopener">Center for Law &amp; Economics</a>. His research applies natural language processing and machine learning to large text corpora to study law, politics, and the economy.</p>
@@ -423,26 +431,22 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
 
     <div id="bio-ilya-boytsov-26">
       <p>Ilya Boytsov is a member of the ML Performance Engineering team at Nebius, where he works on large-scale LLM inference systems and performance optimisation. His interests include efficient transformer architectures, distributed inference infrastructure, and scalable serving of foundation models, with a particular focus on Mixture-of-Experts architectures.</p>
+      <p>He co-organised the 2026 school alongside his teaching, and contributed substantially to the design of the collaborative research project.</p>
     </div>
 
     <div id="bio-piotr-mazurek">
       <p>Piotr Mazurek is Member of Technical Staff at <a href="https://www.liquid.ai/" target="_blank" rel="noopener">Liquid.AI</a>. He writes <a href="https://www.tensoreconomics.com/" target="_blank" rel="noopener">Tensor Economics</a>, a newsletter on the economics and efficiency of large language model deployment.</p>
-      <p>He will lecture on the economics of LLM inference — how to reason about cost, latency, and deployment trade-offs when running models at scale.</p>
+      <p>At the school he lectured on the economics of LLM inference — how to reason about cost, latency, and deployment trade-offs when running models at scale.</p>
     </div>
 
     <div id="bio-ibragim-badertdinov">
       <p>Ibragim Badertdinov is a Lead Engineer at <a href="https://nebius.com/" target="_blank" rel="noopener">Nebius</a>, working on data, code agents, RL environments, and evaluations. He is one of the co-authors of the <a href="https://swe-rebench.com/" target="_blank" rel="noopener">SWE-rebench leaderboard</a> — a live benchmark with fresh software-engineering tasks — as well as the SWE-rebench-v1/-v2 large-scale datasets for coding agents based on real-world tasks.</p>
-      <p>Previously, he worked on pre-training datasets. More information is available on his <a href="https://ibragim.dev/" target="_blank" rel="noopener">personal website</a>. At the school he will lecture on LLM data and RL environments.</p>
-    </div>
-
-    <div id="bio-tatiana-lando">
-      <p>Tatiana Lando is a Senior Research Scientist at Google DeepMind. Her primary research interests lie at the intersection of human–computer interaction (HCI) and natural language processing (NLP), with an additional focus on human computation and data crowdsourcing.</p>
-      <p>Previously, she worked as a linguist for Google Assistant, where she helped pioneer the use of large language models for language understanding and dialogue research. She began her career at Yandex, working on a wide variety of NLP projects. At the school she will lecture on “Language in LLMs: is it solved?”</p>
+      <p>Previously, he worked on pre-training datasets. More information is available on his <a href="https://ibragim.dev/" target="_blank" rel="noopener">personal website</a>. At the school he lectured on LLM data and RL environments.</p>
     </div>
 
     <div id="bio-sagi-shaier">
       <p>Sagi Shaier is an AI researcher focused on foundational problems — efficiency, sparsity, reasoning, transfer learning, and continual learning — where progress ripples across the whole field rather than solving one narrow task. He draws on insights from biological systems to find simple, generalisable ideas, and cares about both the science and its real-world impact.</p>
-      <p>He completed his PhD in Computer Science at the University of Colorado Boulder in 2025, with a dissertation on factual knowledge-enhanced question answering in dynamic environments. His research and industry experience spans several U.S. national laboratories as well as Oracle, Cohere, and Aleph Alpha Research. He is currently a visiting professor at Johannes Gutenberg University Mainz. At the school he will lead a seminar, “Continual Learning: Why Models Forget, and What We Can Do About It.”</p>
+      <p>He completed his PhD in Computer Science at the University of Colorado Boulder in 2025, with a dissertation on factual knowledge-enhanced question answering in dynamic environments. His research and industry experience spans several U.S. national laboratories as well as Oracle, Cohere, and Aleph Alpha Research. He is currently a visiting professor at Johannes Gutenberg University Mainz. At the school he led a seminar, “Continual Learning: Why Models Forget, and What We Can Do About It.”</p>
     </div>
 
     <div id="bio-margaret-roberts">
@@ -461,8 +465,8 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
     </div>
 
     <div id="bio-andreu-casas">
-      <p>Dr. Casas is an incoming Associate Professor of Politics, Technology, and Computational Social Science at the Department of Politics and International Relations and the Oxford Internet Institute, and a Fellow at Reuben College. He is a UKRI Future Leaders Fellow and Director of the <a href="https://london-social-media-observatory.org/" target="_blank" rel="noopener">London Social Media Observatory</a>. He received his PhD in Political Science from the University of Washington. Before joining Oxford, he held positions as Associate Professor at Royal Holloway University of London, Assistant Professor at Vrije Universiteit Amsterdam, and Moore Sloan Research Fellow at the Center for Data Science and the Center for Social Media and Politics at New York University.</p>
-      <p>Dr. Casas is a computational political scientist whose research examines how digital technologies and AI are reshaping politics, policy, and public discourse. His work spans three interconnected areas. In political communication and public policy, he studies the curation and moderation of political speech on social media platforms; the spread and effects of disinformation and information operations; the role of social media in shaping collective action and polarisation; and how social movements, interest groups, political parties, and the public use strategic communication to influence political agendas. In legislative politics, he investigates the conditions under which legislators and legislative groups shape policy through less visible mechanisms, such as amendments and legislative bundling. Across all his research, he develops and applies novel computational methods, including text and image analysis, large (visual) language models, and multimodal modeling approaches, to address both classical and emerging questions in political science.</p>
+      <p>Dr. Casas is an Associate Professor of Politics, Technology, and Computational Social Science at the Department of Politics and International Relations and the Oxford Internet Institute, and a Fellow at Reuben College. He is a UKRI Future Leaders Fellow and Director of the <a href="https://london-social-media-observatory.org/" target="_blank" rel="noopener">London Social Media Observatory</a>. He received his PhD in Political Science from the University of Washington. Before joining Oxford, he held positions as Associate Professor at Royal Holloway University of London, Assistant Professor at Vrije Universiteit Amsterdam, and Moore Sloan Research Fellow at the Center for Data Science and the Center for Social Media and Politics at New York University.</p>
+      <p>Dr. Casas is a computational political scientist whose research examines how digital technologies and AI are reshaping politics, policy, and public discourse. In political communication and public policy, he studies the curation and moderation of political speech on social media platforms; the spread and effects of disinformation and information operations; the role of social media in shaping collective action and polarisation; and how social movements, interest groups, political parties, and the public use strategic communication to influence political agendas. In legislative politics, he investigates the conditions under which legislators shape policy through less visible mechanisms, such as amendments and legislative bundling. Across all his research, he develops and applies novel computational methods, including text and image analysis, large (visual) language models, and multimodal modeling approaches.</p>
       <p>His work has been published in leading journals and outlets including Science Advances, American Political Science Review, American Journal of Political Science, Journal of Politics, Political Analysis, and Cambridge University Press. His research has received funding from NSF, NWO, ERC-Horizon, and UKRI, among other public and private organisations.</p>
     </div>
 
@@ -471,29 +475,3 @@ import SpeakerModal from '../../components/SpeakerModal.astro';
   <SpeakerModal />
 
 </Base>
-
-<style>
-  .venue-block {
-    display: grid;
-    grid-template-columns: minmax(200px, 1fr) minmax(0, 1.5fr);
-    gap: clamp(24px, 4vw, 40px);
-    align-items: start;
-  }
-  .venue-map {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    background: var(--card);
-    min-height: 300px;
-  }
-  .venue-map iframe {
-    display: block;
-    width: 100%;
-    height: 100%;
-    min-height: 300px;
-    border: 0;
-  }
-  @media (max-width: 700px) {
-    .venue-block { grid-template-columns: 1fr; }
-  }
-</style>

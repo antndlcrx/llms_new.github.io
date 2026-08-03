@@ -1,10 +1,11 @@
 ---
 /**
- * Problem-set browser (conventions §4). Collapsed by default; opening it
- * reveals one problem at a time with prev/next navigation, a progress
- * readout, and a per-problem solution reveal. Statements and solutions
- * arrive as String.raw HTML (KaTeX-bearing) from the module's MDX.
- * Without JS the problems render stacked — nothing is lost.
+ * Problem-set browser, v2. Collapsed by default; opens into a designed
+ * practice surface: numbered pills to jump between problems, one problem
+ * per card with a tag-coloured spine, a button-driven solution reveal,
+ * and progress marks on pills whose solutions have been seen.
+ * Statements and solutions arrive as String.raw HTML (KaTeX-bearing)
+ * from the module's MDX. Without JS the problems render stacked.
  */
 interface Problem {
   tag: 'mechanical' | 'conceptual' | 'extension';
@@ -21,35 +22,46 @@ const { problems } = Astro.props;
   <summary>
     <span class="problem-set__eyebrow">Assessment</span>
     <span class="problem-set__title">Problem Set</span>
-    <span class="problem-set__meta">{problems.length} problems · easy → hard · solutions hidden until you commit</span>
+    <span class="problem-set__meta">{problems.length} problems · easy → hard · work on paper, then check</span>
   </summary>
 
   <div class="problem-set__body">
-    <div class="problem-set__panels">
+
+    <div class="problem-set__pills" role="tablist" aria-label="Problems">
       {problems.map((p, i) => (
-        <div class="problem-set__problem" data-index={i}>
-          <p class="problem-set__heading">
-            Problem {i + 1} <span class="problem-tag">{p.tag}</span>
-          </p>
-          <div set:html={p.statement} />
-          <details class="problem-set__solution">
-            <summary>Solution</summary>
+        <button class="problem-set__pill" data-goto={i} data-tag={p.tag} role="tab" aria-label={`Problem ${i + 1}, ${p.tag}`}>{i + 1}</button>
+      ))}
+    </div>
+
+    <div class="problem-set__stage">
+      {problems.map((p, i) => (
+        <article class="problem-card" data-tag={p.tag} data-index={i}>
+          <header class="problem-card__head">
+            <span class="problem-card__num">Problem {i + 1}<span class="problem-card__of"> / {problems.length}</span></span>
+            <span class="problem-tag" data-tag={p.tag}>{p.tag}</span>
+          </header>
+          <div class="problem-card__statement" set:html={p.statement} />
+          <div class="problem-card__actions">
+            <button class="problem-card__reveal">Reveal solution</button>
+          </div>
+          <div class="problem-card__solution" hidden>
+            <p class="problem-card__solution-label">Solution</p>
             <div set:html={p.solution} />
-          </details>
-        </div>
+          </div>
+        </article>
       ))}
     </div>
 
     <div class="problem-set__nav">
-      <button class="problem-set__nav-btn" id="ps-prev" aria-label="Previous problem">← Previous</button>
-      <span class="problem-set__dots" id="ps-dots" role="tablist" aria-label="Problems">
-        {problems.map((_, i) => (
-          <button class="problem-set__dot" data-goto={i} aria-label={`Problem ${i + 1}`}></button>
-        ))}
+      <button class="problem-set__nav-btn" id="ps-prev">← Previous</button>
+      <span class="problem-set__legend">
+        <span class="problem-set__legend-item" data-tag="mechanical">mechanical</span>
+        <span class="problem-set__legend-item" data-tag="conceptual">conceptual</span>
+        <span class="problem-set__legend-item" data-tag="extension">extension</span>
       </span>
-      <span class="problem-set__count" id="ps-count">1 / {problems.length}</span>
-      <button class="problem-set__nav-btn" id="ps-next" aria-label="Next problem">Next →</button>
+      <button class="problem-set__nav-btn" id="ps-next">Next →</button>
     </div>
+
   </div>
 </details>
 
@@ -57,31 +69,39 @@ const { problems } = Astro.props;
 (function() {
   var root = document.getElementById("problem-set");
   if (!root) return;
-  var panels = Array.prototype.slice.call(root.querySelectorAll(".problem-set__problem"));
-  var dots = Array.prototype.slice.call(root.querySelectorAll(".problem-set__dot"));
+  var cards = Array.prototype.slice.call(root.querySelectorAll(".problem-card"));
+  var pills = Array.prototype.slice.call(root.querySelectorAll(".problem-set__pill"));
   var prev = document.getElementById("ps-prev");
   var next = document.getElementById("ps-next");
-  var count = document.getElementById("ps-count");
-  if (!panels.length || !prev || !next) return;
+  if (!cards.length || !prev || !next) return;
   var i = 0;
 
   function show(n) {
-    i = Math.max(0, Math.min(panels.length - 1, n));
-    panels.forEach(function(p, k) {
-      p.style.display = k === i ? "" : "none";
-      // Collapse revealed solutions when leaving a problem.
-      if (k !== i) { var s = p.querySelector(".problem-set__solution"); if (s) s.removeAttribute("open"); }
+    i = Math.max(0, Math.min(cards.length - 1, n));
+    cards.forEach(function(c, k) { c.style.display = k === i ? "" : "none"; });
+    pills.forEach(function(p, k) {
+      p.classList.toggle("is-active", k === i);
+      p.setAttribute("aria-selected", String(k === i));
     });
-    dots.forEach(function(d, k) { d.classList.toggle("is-active", k === i); });
-    count.textContent = (i + 1) + " / " + panels.length;
     prev.disabled = i === 0;
-    next.disabled = i === panels.length - 1;
+    next.disabled = i === cards.length - 1;
   }
+
+  cards.forEach(function(card, k) {
+    var btn = card.querySelector(".problem-card__reveal");
+    var sol = card.querySelector(".problem-card__solution");
+    if (!btn || !sol) return;
+    btn.addEventListener("click", function() {
+      var open = sol.hasAttribute("hidden");
+      if (open) { sol.removeAttribute("hidden"); btn.textContent = "Hide solution"; pills[k].classList.add("is-seen"); }
+      else { sol.setAttribute("hidden", ""); btn.textContent = "Reveal solution"; }
+    });
+  });
 
   prev.addEventListener("click", function() { show(i - 1); });
   next.addEventListener("click", function() { show(i + 1); });
-  dots.forEach(function(d) {
-    d.addEventListener("click", function() { show(parseInt(d.getAttribute("data-goto"), 10)); });
+  pills.forEach(function(p) {
+    p.addEventListener("click", function() { show(parseInt(p.getAttribute("data-goto"), 10)); });
   });
 
   show(0);

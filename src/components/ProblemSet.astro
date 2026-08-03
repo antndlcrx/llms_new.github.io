@@ -18,7 +18,9 @@ interface Props {
 const { problems } = Astro.props;
 ---
 
-<details class="problem-set" id="problem-set">
+{/* id must NOT be "problem-set" — the ## Problem Set heading's auto-slug already owns that id,
+    and getElementById would return the heading instead of this element. */}
+<details class="problem-set" id="ps-root">
   <summary>
     <span class="problem-set__eyebrow">Assessment</span>
     <span class="problem-set__title">Problem Set</span>
@@ -71,7 +73,7 @@ const { problems } = Astro.props;
 
 <script is:inline>
 (function() {
-  var root = document.getElementById("problem-set");
+  var root = document.getElementById("ps-root");
   if (!root) return;
   var cards = Array.prototype.slice.call(root.querySelectorAll(".problem-card"));
   var pills = Array.prototype.slice.call(root.querySelectorAll(".problem-set__pill"));

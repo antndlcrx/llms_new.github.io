@@ -1,5 +1,8 @@
 ---
 import Base from './Base.astro';
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import type { MarkdownHeading } from 'astro';
 
 interface Section {
   id: string;
@@ -7,40 +10,73 @@ interface Section {
 }
 
 interface Props {
-  day: number;
-  title: string;
-  description: string;
-  sections: Section[];
+  // Legacy day-page mode — fed by the legacy-days compat shim; dies at cutover step 4.
+  day?: number;
+  title?: string;
+  description?: string;
+  sections?: Section[];
+  // Module mode — a record from the modules collection.
+  entry?: CollectionEntry<'modules'>;
+  headings?: MarkdownHeading[];
 }
 
-const { day, title, description, sections } = Astro.props;
+const { day, title, description, sections = [], entry, headings = [] } = Astro.props;
 
 const NOTEBOOK_REPO = 'https://github.com/antndlcrx/Intro-to-LLMs-DPIR/blob/main/course_notebooks';
 const COLAB_BASE = 'https://colab.research.google.com/github/antndlcrx/Intro-to-LLMs-DPIR/blob/main/course_notebooks';
 
-const modules = [
-  { day: 1, title: 'Foundations', slug: 'day-1', notebook: 'day_1_foundations/day1_embeddings_to_transformers.ipynb' },
-  { day: 2, title: 'From Models to Tools', slug: 'day-2', notebook: 'day_2_models_to_tools/day2_from_models_to_tools.ipynb' },
-  { day: 3, title: 'Deploying for Research', slug: 'day-3', notebook: 'day_3_deploying_for_research/day3_deploying_for_research.ipynb' },
-  { day: 4, title: 'Extraction, Summarization, and RAG', slug: 'day-4', notebook: 'day_4_rag_survey_response_prediciton/day4_social_science_applications.ipynb' },
-  { day: 5, title: 'Agentic Workflows', slug: 'day-5', notebook: 'day_5_agents/day5_agentic_workflows.ipynb' },
-];
+// ── Legacy mode data (from the compat shim) ──
+const legacyDays = (await getCollection('legacyDays'))
+  .map((e) => ({ ...e.data, slug: `day-${e.data.day}` }))
+  .sort((a, b) => a.day - b.day);
 
-const currentIndex = modules.findIndex(m => m.day === day);
-const current = modules[currentIndex];
-const prev = currentIndex > 0 ? modules[currentIndex - 1] : null;
-const next = currentIndex < modules.length - 1 ? modules[currentIndex + 1] : null;
-const colabUrl = current ? `${COLAB_BASE}/${current.notebook}` : null;
-const githubUrl = current ? `${NOTEBOOK_REPO}/${current.notebook}` : null;
+const currentIndex = day ? legacyDays.findIndex((m) => m.day === day) : -1;
+const current = currentIndex >= 0 ? legacyDays[currentIndex] : null;
+const legacyPrev = currentIndex > 0 ? legacyDays[currentIndex - 1] : null;
+const legacyNext = currentIndex >= 0 && currentIndex < legacyDays.length - 1 ? legacyDays[currentIndex + 1] : null;
+const legacyColabUrl = current ? `${COLAB_BASE}/${current.notebook}` : null;
+const legacyGithubUrl = current ? `${NOTEBOOK_REPO}/${current.notebook}` : null;
+
+// ── Module mode data (from the modules + tracks collections) ──
+const allModules = entry ? await getCollection('modules') : [];
+const allTracks = entry ? await getCollection('tracks') : [];
+const track = entry ? allTracks.find((t) => t.id === entry.data.track) : null;
+const siblings = entry
+  ? allModules.filter((m) => m.data.track === entry.data.track).sort((a, b) => a.data.order - b.data.order)
+  : [];
+const hasParts = siblings.some((m) => m.data.part);
+const partGroups = hasParts
+  ? [...new Map(siblings.map((m) => [m.data.part ?? '', siblings.filter((s) => (s.data.part ?? '') === (m.data.part ?? ''))])).entries()]
+  : [];
+const navigable = siblings.filter((m) => m.data.status !== 'planned');
+const navIndex = entry ? navigable.findIndex((m) => m.id === entry.id) : -1;
+const modPrev = navIndex > 0 ? navigable[navIndex - 1] : null;
+const modNext = navIndex >= 0 && navIndex < navigable.length - 1 ? navigable[navIndex + 1] : null;
+const prereqs = entry
+  ? entry.data.prerequisites.map((p) => allModules.find((m) => m.id === p)).filter((m): m is CollectionEntry<'modules'> => Boolean(m))
+  : [];
+const sectionLinks: Section[] = entry
+  ? headings.filter((h) => h.depth === 2).map((h) => ({ id: h.slug, label: h.text }))
+  : sections;
+const colabLabel = entry?.data.notebookRole === 'explanatory' ? 'Play with this notebook in Colab' : 'Open the module notebook in Colab';
+
+const pageTitle = entry ? `${entry.data.id} · ${entry.data.title}` : `Module ${day}: ${title}`;
+const pageDescription = entry ? entry.data.description : description;
+
+const moduleHref = (m: CollectionEntry<'modules'>) => `/course/${m.id}/`;
 ---
 
-<Base title={`Module ${day}: ${title}`} description={description}>
+<Base title={pageTitle} description={pageDescription}>
 
   <aside class="status-strip" aria-label="Page breadcrumb">
     <div class="status-strip-inner">
       <a href="/course/" style="color:inherit; text-decoration:none;">Course</a>
       <span class="sep"></span>
-      <span>Module {day} of 5 — {title}</span>
+      {entry ? (
+        <Fragment><span>{track?.data.title}</span><span class="sep"></span><span>{entry.data.title}</span></Fragment>
+      ) : (
+        <span>Module {day} of 5 — {title}</span>
+      )}
     </div>
   </aside>
 
@@ -51,44 +87,110 @@ const githubUrl = current ? `${NOTEBOOK_REPO}/${current.notebook}` : null;
         Course Modules ▾
       </button>
       <p class="course-sidebar__label">Modules</p>
-      <ul class="course-sidebar__list" id="sidebar-list">
-        {modules.map(m => (
-          <li class="course-sidebar__module">
-            <a
-              href={`/course/${m.slug}/`}
-              class:list={[
-                'course-sidebar__module-link',
-                { 'course-sidebar__module-link--active': m.day === day }
-              ]}
-            >
-              <span class="course-sidebar__module-num">{m.day}.</span> {m.title}
-            </a>
-            {m.day === day && sections.length > 0 && (
-              <ul class="course-sidebar__sections">
-                {sections.map(s => (
-                  <li>
-                    <a href={`#${s.id}`} class="course-sidebar__section-link">{s.label}</a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-        ))}
-      </ul>
+      {entry ? (
+        <ul class="course-sidebar__list" id="sidebar-list">
+          {(hasParts ? partGroups : [['', siblings] as const]).map(([part, group]) => (
+            <Fragment>
+              {part && <li class="course-sidebar__part">{part}</li>}
+              {group.map((m) => (
+                <li class="course-sidebar__module">
+                  {m.data.status === 'planned' ? (
+                    <span class="course-sidebar__module-link course-sidebar__module-link--planned">
+                      {m.data.title} <span class="planned-tag">planned</span>
+                    </span>
+                  ) : (
+                    <a
+                      href={moduleHref(m)}
+                      class:list={[
+                        'course-sidebar__module-link',
+                        { 'course-sidebar__module-link--active': m.id === entry.id }
+                      ]}
+                    >
+                      {m.data.title}
+                    </a>
+                  )}
+                  {m.id === entry.id && sectionLinks.length > 0 && (
+                    <ul class="course-sidebar__sections">
+                      {sectionLinks.map(s => (
+                        <li>
+                          <a href={`#${s.id}`} class="course-sidebar__section-link">{s.label}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </Fragment>
+          ))}
+        </ul>
+      ) : (
+        <ul class="course-sidebar__list" id="sidebar-list">
+          {legacyDays.map(m => (
+            <li class="course-sidebar__module">
+              <a
+                href={`/course/${m.slug}/`}
+                class:list={[
+                  'course-sidebar__module-link',
+                  { 'course-sidebar__module-link--active': m.day === day }
+                ]}
+              >
+                <span class="course-sidebar__module-num">{m.day}.</span> {m.title}
+              </a>
+              {m.day === day && sections.length > 0 && (
+                <ul class="course-sidebar__sections">
+                  {sections.map(s => (
+                    <li>
+                      <a href={`#${s.id}`} class="course-sidebar__section-link">{s.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </aside>
 
     <div class="course-content">
 
       <header class="course-header">
-        <p class="course-header__day">Module {day} of 5</p>
-        <h1 class="course-header__title">{title}</h1>
-        <p class="course-header__desc">{description}</p>
-        {colabUrl && (
+        {entry ? (
+          <p class="course-header__day">{entry.data.id} · {track?.data.title} · ~{entry.data.estimatedMinutes} min</p>
+        ) : (
+          <p class="course-header__day">Module {day} of 5</p>
+        )}
+        <h1 class="course-header__title">{entry ? entry.data.title : title}</h1>
+        <p class="course-header__desc">{pageDescription}</p>
+        {entry && prereqs.length > 0 && (
+          <p class="prereq-chips">
+            <span class="prereq-chips__label">Requires</span>
+            {prereqs.map((p) =>
+              p.data.status === 'planned' ? (
+                <span class="prereq-chip prereq-chip--planned">{p.data.title} <span class="planned-tag">planned</span></span>
+              ) : (
+                <a class="prereq-chip" href={moduleHref(p)}>{p.data.title}</a>
+              )
+            )}
+          </p>
+        )}
+        {entry && entry.data.colab && (
           <p class="course-header__notebook" style="margin-top:18px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
-            <a class="btn-primary" href={colabUrl} target="_blank" rel="noopener">
+            <a class="btn-primary" href={entry.data.colab} target="_blank" rel="noopener">
+              {colabLabel} <span class="arrow">→</span>
+            </a>
+            {entry.data.notebook && (
+              <a class="btn-link-v3" href={entry.data.notebook} target="_blank" rel="noopener">
+                View on GitHub <span class="arrow">→</span>
+              </a>
+            )}
+          </p>
+        )}
+        {!entry && legacyColabUrl && (
+          <p class="course-header__notebook" style="margin-top:18px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+            <a class="btn-primary" href={legacyColabUrl} target="_blank" rel="noopener">
               Open the Module {day} notebook in Colab <span class="arrow">→</span>
             </a>
-            <a class="btn-link-v3" href={githubUrl} target="_blank" rel="noopener">
+            <a class="btn-link-v3" href={legacyGithubUrl} target="_blank" rel="noopener">
               View on GitHub <span class="arrow">→</span>
             </a>
           </p>
@@ -99,20 +201,37 @@ const githubUrl = current ? `${NOTEBOOK_REPO}/${current.notebook}` : null;
         <slot />
       </div>
 
-      <nav class="course-nav" aria-label="Module navigation">
-        {prev && (
-          <a href={`/course/${prev.slug}/`} class="course-nav__link course-nav__link--prev">
-            <span class="course-nav__dir">← Previous</span>
-            <span class="course-nav__title">Module {prev.day}: {prev.title}</span>
-          </a>
-        )}
-        {next && (
-          <a href={`/course/${next.slug}/`} class="course-nav__link course-nav__link--next">
-            <span class="course-nav__dir">Next →</span>
-            <span class="course-nav__title">Module {next.day}: {next.title}</span>
-          </a>
-        )}
-      </nav>
+      {entry ? (
+        <nav class="course-nav" aria-label="Module navigation">
+          {modPrev && (
+            <a href={moduleHref(modPrev)} class="course-nav__link course-nav__link--prev">
+              <span class="course-nav__dir">← Previous</span>
+              <span class="course-nav__title">{modPrev.data.id} · {modPrev.data.title}</span>
+            </a>
+          )}
+          {modNext && (
+            <a href={moduleHref(modNext)} class="course-nav__link course-nav__link--next">
+              <span class="course-nav__dir">Next →</span>
+              <span class="course-nav__title">{modNext.data.id} · {modNext.data.title}</span>
+            </a>
+          )}
+        </nav>
+      ) : (
+        <nav class="course-nav" aria-label="Module navigation">
+          {legacyPrev && (
+            <a href={`/course/${legacyPrev.slug}/`} class="course-nav__link course-nav__link--prev">
+              <span class="course-nav__dir">← Previous</span>
+              <span class="course-nav__title">Module {legacyPrev.day}: {legacyPrev.title}</span>
+            </a>
+          )}
+          {legacyNext && (
+            <a href={`/course/${legacyNext.slug}/`} class="course-nav__link course-nav__link--next">
+              <span class="course-nav__dir">Next →</span>
+              <span class="course-nav__title">Module {legacyNext.day}: {legacyNext.title}</span>
+            </a>
+          )}
+        </nav>
+      )}
 
     </div>
 

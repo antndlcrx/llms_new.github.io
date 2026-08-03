@@ -2560,3 +2560,73 @@ code {
   max-width: 620px;
   margin-bottom: 1.5rem;
 }
+
+/* ===================================================================
+   Module-page chrome (collection-driven course pages)
+   =================================================================== */
+
+.course-sidebar__part {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  margin: 18px 0 8px;
+  list-style: none;
+}
+
+.course-sidebar__module-link--planned {
+  color: var(--text-dim, #9CA3AF);
+  cursor: default;
+}
+
+.planned-tag {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim, #9CA3AF);
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+.prereq-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.prereq-chips__label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+}
+
+.prereq-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-sec, #3D4455);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+a.prereq-chip:hover {
+  border-color: var(--accent, #2D8ABF);
+  color: var(--accent, #2D8ABF);
+}
+
+.prereq-chip--planned {
+  color: var(--text-dim, #9CA3AF);
+  border-style: dashed;
+}

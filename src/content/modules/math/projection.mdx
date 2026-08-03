@@ -3,11 +3,399 @@ track: math
 order: 3
 id: M3
 title: Projection and Subspaces
-description: "Projection is the closest point in a subspace — and OLS, which you already use, is exactly that."
-objectives: []
+description: "Projection is the closest point in a subspace — and OLS, which you already use, is exactly that. This module converts knowledge you own into geometry you can see."
+objectives:
+  - Derive the projection of a vector onto a line, and interpret the residual.
+  - Explain why the residual is orthogonal to the subspace, and what that has to do with "closest".
+  - Recognise OLS as projection onto the column space of the design matrix.
+  - Construct an interpretable axis in an embedding space and project words onto it.
+  - State what semantic projection measures — and what it assumes.
 prerequisites: [math/vectors, math/matrices]
-estimatedMinutes: 75
-status: planned
+seeAlso: []
+estimatedMinutes: 90
+status: draft
+widgets:
+  - projection-sandbox
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import ProjectionSandbox from '../../../components/widgets/ProjectionSandbox.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  projSetup: String.raw`$$\text{find } t \text{ such that the residual is orthogonal:}\qquad (\mathbf{a} - t\mathbf{b}) \cdot \mathbf{b} = 0$$`,
+  projSetupCaption: String.raw`The closest-point condition, written with M1's tools. The candidate points on the line are $t\mathbf{b}$ for every number $t$; the leftover arrow $\mathbf{a} - t\mathbf{b}$ is the miss; and "closest" will turn out to mean "the miss is orthogonal to the line".`,
+  projSolve: String.raw`$$\mathbf{a}\cdot\mathbf{b} - t\,(\mathbf{b}\cdot\mathbf{b}) = 0 \qquad\Longrightarrow\qquad t = \frac{\mathbf{a}\cdot\mathbf{b}}{\mathbf{b}\cdot\mathbf{b}}$$`,
+  projSolveCaption: String.raw`Distribute the dot product (bilinearity, from M2's appendix) and solve for $t$. One line of algebra — the derivation is genuinely this short once M1 is in place.`,
+  projFormula: String.raw`$$\operatorname{proj}_{\mathbf{b}}(\mathbf{a}) \;=\; \frac{\mathbf{a}\cdot\mathbf{b}}{\mathbf{b}\cdot\mathbf{b}}\,\mathbf{b}$$`,
+  projFormulaCaption: String.raw`The formula with the fraction in it — now derived rather than memorised. The scalar $t$ says <em>how far along</em> $\mathbf{b}$ the closest point lies; multiplying by $\mathbf{b}$ walks there.`,
+  projDef: String.raw`The projection of $\mathbf{a}$ onto a subspace $S$ is the point of $S$ closest to $\mathbf{a}$ in Euclidean distance. The difference $\mathbf{a} - \operatorname{proj}_S(\mathbf{a})$ is the <strong>residual</strong>, and it is orthogonal to every vector in $S$ — the two definitions (closest point; orthogonal residual) pick out the same point.`,
+  colSpaceDef: String.raw`For a matrix $X \in \mathbb{R}^{n \times k}$, the <strong>column space</strong> $\operatorname{col}(X)$ is the set of all linear combinations $X\boldsymbol\beta$ of its columns — every output the map can reach. For a regression design matrix, it is the set of all fitted-value vectors any coefficient choice could produce.`,
+  normalEq: String.raw`$$X^\top(\mathbf{y} - X\hat{\boldsymbol\beta}) = \mathbf{0} \qquad\Longleftrightarrow\qquad X^\top X\,\hat{\boldsymbol\beta} = X^\top \mathbf{y}$$`,
+  normalEqCaption: String.raw`The normal equations, read geometrically: the residual $\mathbf{y} - X\hat{\boldsymbol\beta}$ must be orthogonal to every column of $X$ at once. The algebra your statistics course solved is the orthogonality condition, stacked $k$ times.`,
+  hatMatrix: String.raw`$$\hat{\mathbf{y}} \;=\; X\left(X^\top X\right)^{-1}X^\top\,\mathbf{y} \;=\; P\,\mathbf{y}$$`,
+  hatMatrixCaption: String.raw`The hat matrix $P$ — the object your software applies every time you fit a linear model — <em>is</em> the projection onto $\operatorname{col}(X)$. Fitted values are the shadow of $\mathbf{y}$ on the reachable set; residuals are the part of $\mathbf{y}$ the regressors cannot express.`,
+  axisFormula: String.raw`$$\mathbf{v}_{\text{axis}} = \frac{1}{k}\sum_{i=1}^{k}\left(\mathbf{v}_{a_i} - \mathbf{v}_{b_i}\right) \qquad\qquad \text{score}(w) = \frac{\mathbf{v}_w \cdot \mathbf{v}_{\text{axis}}}{\lVert \mathbf{v}_{\text{axis}} \rVert}$$`,
+  axisFormulaCaption: String.raw`Build the axis by averaging difference vectors over paired words ($a_i$–$b_i$: <em>he–she</em>, <em>man–woman</em>, …) — M1's "relations are directions", stabilised by averaging. The score of any word is its scalar projection onto that axis: a coordinate along a meaning.`,
+  axisDef: String.raw`A direction in embedding space constructed from antonym or contrast pairs, onto which other words are projected. The resulting coordinate is used as a <strong>measurement</strong> of the words' loading on the contrast — a cultural-dimension score in the sense of Kozlowski, Taddy and Evans (2019).`,
+  gsApp: String.raw`<strong>Gram–Schmidt</strong> converts any basis of a subspace into an orthonormal one: take the first vector and normalise; from the second, subtract its projection onto the first, then normalise; from each later vector, subtract its projections onto everything already built. It is this module's one operation — project and remove — applied repeatedly, and it is why "assume an orthonormal basis" is never a loss of generality.`,
+  qrApp: String.raw`Collecting Gram–Schmidt's output as columns gives the <strong>QR decomposition</strong> $X = QR$, with $Q$ orthonormal and $R$ upper triangular. Numerical software fits least squares through QR rather than by forming $(X^\top X)^{-1}$, which is both faster and far better behaved — worth knowing the next time a regression library mentions QR in its documentation.`,
+  projMatApp: String.raw`A <strong>projection matrix</strong> satisfies $P^2 = P$ (projecting twice changes nothing — the shadow of a shadow is itself) and, for orthogonal projection, $P = P^\top$. Its eigenvalues are all 0 or 1: directions inside the subspace are kept ($\lambda = 1$), directions orthogonal to it are annihilated ($\lambda = 0$) — a preview of M4's habit of reading matrices through their eigenvalues.`,
+  optimApp: String.raw`<strong>Least squares as optimisation:</strong> minimise $L(\boldsymbol\beta) = \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2$. Expanding and setting the gradient to zero (M5 supplies the machinery) gives $-2X^\top\mathbf{y} + 2X^\top X\boldsymbol\beta = \mathbf{0}$ — the normal equations again. The calculus route and the geometric route arrive at the same place because minimising squared distance <em>is</em> finding the closest point; the extension problem has you walk it.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Project $\mathbf{a} = (3, 1)$ onto the line spanned by $\mathbf{b} = (2, 2)$. Compute the projection, the residual, and verify that the residual is orthogonal to $\mathbf{b}$. Repeat for $\mathbf{a} = (1, 2)$ onto $\mathbf{b} = (0, 3)$ — and say in words why the second answer looks the way it does.</p>`,
+    solution: String.raw`<p>First: $t = \frac{\mathbf{a}\cdot\mathbf{b}}{\mathbf{b}\cdot\mathbf{b}} = \frac{6+2}{8} = 1$, so the projection is $(2, 2)$ and the residual is $(1, -1)$; check $(1,-1)\cdot(2,2) = 0$ ✓. Second: $t = \frac{0 + 6}{9} = \frac{2}{3}$, projection $(0, 2)$, residual $(1, 0)$; check $(1,0)\cdot(0,3) = 0$ ✓. The second line is the vertical axis, so projecting onto it simply keeps the second coordinate and discards the first — projection onto an axis is coordinate-reading, which is why embedding-space semantic "axes" are called axes at all.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>For a unit vector $\mathbf{u}$, the matrix $P = \mathbf{u}\mathbf{u}^\top$ projects onto the line spanned by $\mathbf{u}$. Show algebraically that $P^2 = P$, and explain in one sentence why the geometry makes this obvious before any algebra.</p>`,
+    solution: String.raw`<p>$P^2 = \mathbf{u}\mathbf{u}^\top\mathbf{u}\mathbf{u}^\top = \mathbf{u}\,(\mathbf{u}^\top\mathbf{u})\,\mathbf{u}^\top = \mathbf{u}\,(1)\,\mathbf{u}^\top = P$, using $\mathbf{u}^\top\mathbf{u} = \lVert\mathbf{u}\rVert^2 = 1$. Geometrically: a point already on the line is its own closest point on the line, so projecting a second time has nothing left to do — the shadow of a shadow is itself.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Starting from the normal equations, show that the OLS residual $\mathbf{e} = \mathbf{y} - X\hat{\boldsymbol\beta}$ is orthogonal to <em>each column</em> of $X$. If the design matrix contains an intercept column of ones, what everyday regression fact does this orthogonality become?</p>`,
+    solution: String.raw`<p>The normal equations say $X^\top\mathbf{e} = \mathbf{0}$ — and the $j$-th entry of $X^\top\mathbf{e}$ is precisely $\mathbf{x}_{\cdot j} \cdot \mathbf{e}$, so every column's dot product with the residual is zero. For the column of ones, $\mathbf{1}\cdot\mathbf{e} = \sum_i e_i = 0$: <em>residuals sum to zero</em>. And zero dot product with each centred regressor is zero sample covariance — the textbook sentence "the residuals are uncorrelated with the predictors" is this orthogonality, wearing statistical vocabulary. You have been computing geometry all along.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>A researcher builds a gender axis from the pairs <em>he–she</em> and <em>man–woman</em>; a colleague uses <em>king–queen</em> and <em>father–mother</em>. Projecting the same occupation words gives noticeably different rankings. What does this disagreement tell you about the method — and what practice does it demand?</p>`,
+    solution: String.raw`<p>It tells you the "gender axis" is not a single object waiting to be found: each pair set isolates a slightly different direction (each pair's difference vector carries its own connotations — royalty, kinship — alongside gender), and the measurement inherits those choices. That is not fatal; it is what being a <em>measurement instrument</em> means. The demanded practice is standard measurement hygiene: use many pairs and average (reducing pair-specific noise), report the sensitivity of results to the pair set, and validate the scores against external ground truth before interpreting them — precisely the validation discipline the LLMs track's measurement module insists on for classifiers.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Why must axis vectors be normalised before you compare projections <em>across different axes</em> — say, claiming a word loads more strongly on a gender axis than on a class axis?</p>`,
+    solution: String.raw`<p>The scalar projection onto $\mathbf{v}$ is $\mathbf{v}_w \cdot \mathbf{v} / \lVert\mathbf{v}\rVert$ — but if you skip the division, the raw dot product scales with $\lVert\mathbf{v}\rVert$: an axis built from more pairs, or from pairs with longer difference vectors, produces systematically larger numbers for reasons that have nothing to do with meaning. Comparing unnormalised loadings across axes is comparing measurements taken in different units. Normalising makes each axis a unit ruler, so a coordinate of 0.3 means the same amount of "along-ness" whichever axis produced it — M1's "what normalisation discards" argument, now as a methods requirement.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Derive the normal equations from optimisation: expand $L(\boldsymbol\beta) = \lVert \mathbf{y} - X\boldsymbol\beta \rVert^2$ using M1's bridge identity, differentiate with respect to $\boldsymbol\beta$ (treat $\nabla_{\boldsymbol\beta}$ formally if M5 is still ahead of you), set the gradient to zero, and confirm you land on the same equations the geometric orthogonality argument produced. Why <em>must</em> the two routes agree?</p>`,
+    solution: String.raw`<p>Expand: $L = \mathbf{y}^\top\mathbf{y} - 2\boldsymbol\beta^\top X^\top\mathbf{y} + \boldsymbol\beta^\top X^\top X \boldsymbol\beta$. The gradient is $\nabla L = -2X^\top\mathbf{y} + 2X^\top X\boldsymbol\beta$; setting it to zero gives $X^\top X\hat{\boldsymbol\beta} = X^\top\mathbf{y}$ — the normal equations. They must agree because they are two descriptions of one problem: $L$ is squared Euclidean distance from $\mathbf{y}$ to the point $X\boldsymbol\beta$ of the column space, so minimising $L$ <em>is</em> finding the closest point of the subspace — and this module's whole argument is that the closest point is characterised by an orthogonal residual. Calculus and geometry are not two proofs; they are one fact examined from two sides.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    You have fitted a linear regression. You have read the phrase "residuals are uncorrelated
+    with the predictors" and nodded. This module's claim is that in doing so you were already
+    doing geometry — that OLS <em>is</em> a projection, the fitted values <em>are</em> a
+    shadow, and the residual's orthogonality is what "best fit" has meant all along. Nothing
+    here is new knowledge; it is knowledge you own, converted into pictures — which makes this
+    the highest-leverage module in the track, and the one that turns embedding-space
+    measurement from a trick into a method you can defend.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Derive the projection of a vector onto a line, and interpret the residual.</li>
+      <li>Explain why the residual is orthogonal to the subspace, and what that has to do with "closest".</li>
+      <li>Recognise OLS as projection onto the column space of the design matrix.</li>
+      <li>Construct an interpretable axis in an embedding space and project words onto it.</li>
+      <li>State what semantic projection measures — and what it assumes.</li>
+    </ol>
+  </div>
+</section>
+
+## The Closest Point
+
+Start with a question simple enough to draw. Here is a vector <em>a</em>, and here is a line
+through the origin — the span of some vector <em>b</em>. Of all the points on the line,
+<strong>which one is closest to <em>a</em></strong>?
+
+Intuition answers immediately: drop a perpendicular from the tip of <em>a</em> onto the line;
+where it lands is the closest point. You met that dropped perpendicular in M1 as the dot
+product's third reading — the shadow. What M1 did not do is <em>derive</em> it, and with the
+dot product in hand the derivation is three lines. Every candidate point on the line has the
+form <em>t</em><strong>b</strong> for some number <em>t</em>; ask for the <em>t</em> that
+makes the leftover arrow perpendicular to the line:
+
+<div class="formula-block">
+  <Tex tex={math.projSetup} />
+  <Tex class="formula-block__caption" tex={math.projSetupCaption} />
+</div>
+
+<div class="formula-block">
+  <Tex tex={math.projSolve} />
+  <Tex class="formula-block__caption" tex={math.projSolveCaption} />
+</div>
+
+<div class="formula-block">
+  <Tex tex={math.projFormula} />
+  <Tex class="formula-block__caption" tex={math.projFormulaCaption} />
+</div>
+
+That is the formula with the fraction in it — the one usually handed down as a rule. Notice
+what it is made of: one dot product asking "how aligned are <em>a</em> and <em>b</em>?", one
+asking "how long is <em>b</em>?", and a rescaling. Nothing in it is new; it is M1, arranged.
+Now put your hands on it:
+
+<ProjectionSandbox />
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Projection</p>
+  <Tex tex={math.projDef} />
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Projection answers "which point of the subspace is closest?" — and the answer is the foot
+    of the dropped perpendicular, derived in one line by demanding the residual be orthogonal.
+    The formula is M1's dot product, arranged; it was never a rule to memorise.
+  </p>
+</div>
+
+## Why the Residual Must Be Orthogonal
+
+The derivation <em>assumed</em> the best residual is perpendicular. That assumption deserves
+one honest minute, because it is the hinge of the whole module.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    Suppose someone proposes a "closest point" whose residual is <em>not</em> orthogonal to
+    the line — it leans, say, slightly forwards along the line's direction. Without any
+    formulas: can their point really be the closest? What small move improves it?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        It cannot be closest. A leaning residual has a component <em>along</em> the line, and
+        that component is error you can still remove: slide the candidate point along the
+        line in the direction of the lean, and the residual shortens — its along-the-line
+        part shrinks while its perpendicular part is untouched. Improvement is possible
+        exactly as long as any lean remains, so at the true minimum, no lean remains.
+        "Closest" and "orthogonal residual" are the same condition, approached from two
+        sides. In the sandbox: nudge the line handle slightly and watch the residual length
+        rise from its minimum — you are watching this argument run.
+      </p>
+    </div>
+  </details>
+</div>
+
+This equivalence — <em>closest means orthogonal</em> — is worth engraving, because everything
+downstream is an application of it. Written as an equation, "the residual is orthogonal to
+what I projected onto" <em>is</em> the normal equation; you solved it a moment ago for one
+line, and in two sections' time you will watch your statistics software solve it for many
+columns at once. Same sentence, bigger subspace.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Closest and orthogonal are one condition: while any component of the residual lies along
+    the subspace, sliding within the subspace still improves the fit. The normal equations
+    are this sentence, written with dot products.
+  </p>
+</div>
+
+## More Than One Direction: Subspaces
+
+A line is a one-direction subspace. Real problems project onto richer targets: the set of
+everything reachable by combining several directions — in M2's language, a column space.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Column Space</p>
+  <Tex tex={math.colSpaceDef} />
+</div>
+
+The closest-point question survives unchanged: given <strong>y</strong> and a subspace, find
+the point of the subspace nearest to it. And the answer keeps its shape: the best point is
+the one whose residual is orthogonal to <em>every</em> direction in the subspace — one
+orthogonality condition per direction, all holding simultaneously.
+
+One practical subtlety earns a mention. If the directions spanning your subspace are
+themselves orthonormal — mutually perpendicular unit vectors — projection is bliss: project
+onto each direction separately with the one-line formula and add the results; no interaction,
+no system to solve. Non-orthogonal spanning directions overlap and double-count, forcing you
+to solve simultaneous equations instead. This is why so much of numerical linear algebra is a
+campaign to orthonormalise first — and the appendix's Gram–Schmidt procedure is exactly that
+campaign, run with this module's only operation: project, and subtract.
+
+<details class="appendix-box">
+  <summary>Appendix · Gram–Schmidt and QR</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.gsApp} />
+    <Tex tex={math.qrApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Subspace projection is the same closest-point question with more directions, answered by
+    demanding orthogonality to all of them at once. Orthonormal directions make it trivially
+    additive — which is why orthonormalising first is a standing habit of numerical practice.
+  </p>
+</div>
+
+## OLS Is Projection
+
+Now the payoff. Take a regression: an outcome vector <strong>y</strong> holding one number
+per observation, and a design matrix <em>X</em> whose columns are your regressors — each
+column also one number per observation. Read it geometrically, with M2's eyes: every
+candidate coefficient vector picks out a point <em>X</em><strong>β</strong> of the column
+space, and the fitted values your software reports are one particular such point. Which one?
+The one minimising the sum of squared residuals — which is squared Euclidean
+<em>distance</em> — which is to say: <strong>the closest point of the column space to
+y</strong>. OLS is projection. It always was.
+
+<div class="formula-block">
+  <Tex tex={math.normalEq} />
+  <Tex class="formula-block__caption" tex={math.normalEqCaption} />
+</div>
+
+<div class="formula-block">
+  <Tex tex={math.hatMatrix} />
+  <Tex class="formula-block__caption" tex={math.hatMatrixCaption} />
+</div>
+
+Every phrase of regression folklore now has a picture. <em>Fitted values</em>: the shadow of
+the outcome on the reachable set. <em>Residuals uncorrelated with predictors</em>: the
+residual is orthogonal to every column — the normal equations, verbatim (problem 3 makes the
+translation exact, intercept and all). <em>The hat matrix "puts the hat on y"</em>: it is a
+projection matrix, and the appendix shows its defining properties are geometric platitudes —
+projecting twice is projecting once, and orthogonal projection is symmetric. Even
+<em>R²</em> is Pythagoras: the squared length of the centred outcome splits into a fitted
+part plus a residual part <em>because those two parts are perpendicular</em>.
+
+You have computed all of this many times without being shown it. That is not a criticism of
+your training — it is the reason this module sits where it does: the geometry was waiting
+inside a method you already trust, and from here the track can spend that trust elsewhere.
+
+<details class="appendix-box">
+  <summary>Appendix · projection matrices, and least squares as optimisation</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.projMatApp} />
+    <Tex tex={math.optimApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    OLS finds the closest point of the column space to the outcome vector: fitted values are
+    a projection, the normal equations are the orthogonality condition, and "residuals
+    uncorrelated with predictors" is geometry wearing statistical vocabulary.
+  </p>
+</div>
+
+## Semantic Projection as Measurement
+
+The same operation, pointed at language. M1 established that in an embedding space,
+<em>relations are directions</em> — the arrow from <em>he</em> to <em>she</em> carries
+something like gender. Projection is what turns that observation into an instrument:
+
+<div class="formula-block">
+  <Tex tex={math.axisFormula} />
+  <Tex class="formula-block__caption" tex={math.axisFormulaCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Semantic Axis</p>
+  <Tex tex={math.axisDef} />
+</div>
+
+Project <em>nurse</em>, <em>engineer</em>, <em>banker</em> onto a gender axis and each
+receives a coordinate; project onto a rich–poor axis and each receives another. Kozlowski,
+Taddy and Evans used exactly this to trace the cultural meaning of class across a century of
+text; Grand and colleagues showed such projections recover fine-grained human judgements
+about objects. It is a genuinely elegant method — one derivation, no training, interpretable
+by construction.
+
+Because it is a measurement instrument, its assumptions must be stated as sharply as its
+formula. <strong>It assumes the contrast is linear</strong> — that "gender" is a single
+straight direction rather than a curved or context-dependent structure. <strong>It assumes
+the pairs isolate one dimension</strong> — but <em>king–queen</em> drags royalty along with
+gender, and the axis inherits every such stowaway. <strong>It assumes the corpus defines the
+semantics</strong> — the axis measures the training text's usage, so a coordinate for
+<em>nurse</em> is a fact about written language as sampled, not about nurses. None of these
+are reasons not to use the method; all of them are reasons to validate it — many pairs,
+sensitivity checks, external ground truth — with exactly the discipline the LLMs track's
+validation module demands of any classifier.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    You project <em>nurse</em> onto a he–she axis and get a clearly nonzero coordinate. Is
+    that a fact about the world, a fact about language, or a fact about your corpus? What
+    would you need to do before citing the number in a paper?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        Most precisely, it is a fact about your corpus: the embedding space is fitted to
+        co-occurrence statistics of a particular sample of text, so the coordinate measures
+        how that text uses the word. That may reflect the world (occupational statistics),
+        the language's baggage (stereotyped usage), or the sample (a corpus of 19th-century
+        novels answers differently from one of clinical notes) — and the projection alone
+        cannot tell you which. Before citing it: rebuild the axis from several pair sets and
+        report the spread, replicate across corpora and embedding models, and validate
+        against an external benchmark. The number is a measurement, and measurements earn
+        trust through validation, not elegance.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Semantic projection turns "relations are directions" into an instrument: build an axis
+    from contrast pairs, project, read the coordinate as a score. Its assumptions — linearity
+    of the contrast, purity of the pairs, corpus-defined semantics — are the methods section
+    it owes, and validation is not optional.
+  </p>
+</div>
+
+## Problem Set
+
+The module's real assessment: six problems, easy to hard, on paper first. Problem 3 is the
+one to linger on — it is the moment the regression you already run becomes the geometry you
+now own.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    Projection answers one question — which point of a subspace is closest? — and the answer
+    is always the foot of an orthogonal residual: closest <em>means</em> orthogonal, each
+    direction of the subspace contributing one orthogonality condition. Onto a line, the
+    formula is M1's dot product arranged by a one-line derivation; onto a column space, the
+    conditions stack into the normal equations, and the hat matrix that solves them is a
+    projection matrix — so OLS, the method this audience has trusted for years, is revealed
+    as geometry: fitted values a shadow, residual orthogonality the meaning of "best fit",
+    R² an application of Pythagoras. The same operation pointed at embedding spaces yields
+    semantic projection — axes built from contrast pairs, words scored by their coordinate
+    along a meaning — a genuine measurement instrument that therefore owes the full
+    measurement debts: stated assumptions, sensitivity analysis, external validation. One
+    picture, drawn three times; the track's next stop takes the matrix itself apart.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/" target="_blank" rel="noopener">Strang, MIT 18.06 / <em>Introduction to Linear Algebra</em>, ch. 4</a>: orthogonality and least squares — the canonical treatment of this module's geometry.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em></a>: sections 3.7–3.8 on projections, free online.</li>
+    <li><a href="https://journals.sagepub.com/doi/10.1177/0003122419877135" target="_blank" rel="noopener">Kozlowski, Taddy &amp; Evans (2019), <em>The Geometry of Culture</em>, ASR</a>: semantic projection as social measurement — the paper this module's fifth section is built around.</li>
+    <li><a href="https://www.nature.com/articles/s41562-022-01316-8" target="_blank" rel="noopener">Grand, Blank, Pereira &amp; Fedorenko (2022), <em>Nature Human Behaviour</em></a>: semantic projection recovering human judgements across many feature dimensions.</li>
+  </ul>
+</section>

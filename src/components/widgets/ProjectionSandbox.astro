@@ -1,0 +1,268 @@
+---
+/**
+ * projection-sandbox (M3) — one engine, two labellings. Geometric mode:
+ * drag a vector and a subspace line; the projection, residual, and their
+ * right angle render live. Regression mode: the identical picture
+ * relabelled as two-observation OLS — the vector becomes y, the line
+ * becomes the regressor's span, the projection becomes the fitted values,
+ * the residual becomes e — plus an inset scatter showing the same numbers
+ * as the regression plot the audience already knows. The mode toggle is
+ * the pedagogy: OLS and vector projection are the same operation.
+ * Hand-rolled canvas, no libraries. All ids pjs-prefixed (never a
+ * heading slug — see the problem-set id-collision lesson).
+ */
+---
+
+<div class="widget-wrap" id="projection-sandbox">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">The Projection Sandbox</p>
+  <p class="widget-intro">
+    Drag the tip of the vector and the handle on the line. The projection is the closest point
+    on the line; the dashed residual meets the line at a right angle, always. Then press the
+    toggle: <strong>nothing moves</strong> — the picture just gets relabelled as a regression,
+    because it always was one.
+  </p>
+
+  <p style="margin: 0 0 12px;">
+    <button id="pjs-mode" aria-pressed="false" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--accent, #2D8ABF); border-radius: 4px; background: transparent; color: var(--accent, #2D8ABF); cursor: pointer;">Relabel as regression →</button>
+    <span id="pjs-story" style="margin-left: 12px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted, #6B7280);">the projection is the closest point on the line</span>
+  </p>
+
+  <div class="visual-diagram" style="margin: 0 0 4px;">
+    <canvas id="pjs-canvas" width="480" height="400" style="width:100%; max-width:480px; display:block; margin:0 auto; touch-action:none;" tabindex="0" aria-label="Projection of a vector onto a line. Drag the vector tip or the line handle. Keyboard: arrow keys move the vector; square-bracket keys rotate the line."></canvas>
+  </div>
+
+  <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family: var(--font-mono); padding: 6px 0 2px;">
+    <span style="font-size:13px; color: var(--text-sec, #3D4455);"><span id="pjs-coef-label">a·b / b·b</span>&nbsp;=&nbsp;<span id="pjs-coef" style="font-weight:700; color: var(--text, #0F1117);">—</span></span>
+    <span style="font-size:12px; color: var(--text-sec, #3D4455);"><span id="pjs-rnorm-label">‖residual‖</span>&nbsp;=&nbsp;<span id="pjs-rnorm">—</span></span>
+    <span style="font-size:12px; color: var(--text-muted, #6B7280);"><span id="pjs-orth-label">residual&nbsp;·&nbsp;b</span>&nbsp;=&nbsp;<span id="pjs-orth">—</span></span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top: 10px;">
+    The small square at the foot marks the right angle — the residual is orthogonal to the
+    line, which is what <em>closest</em> means. In regression view the inset draws the same
+    two observations as the scatter plot you know, fitted line and vertical residuals included:
+    one computation, two pictures.
+  </p>
+</div>
+
+<script is:inline>
+(function() {
+  var canvas = document.getElementById("pjs-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var modeBtn = document.getElementById("pjs-mode");
+  var story = document.getElementById("pjs-story");
+  var outCoef = document.getElementById("pjs-coef"), outCoefLab = document.getElementById("pjs-coef-label");
+  var outRnorm = document.getElementById("pjs-rnorm"), outRnormLab = document.getElementById("pjs-rnorm-label");
+  var outOrth = document.getElementById("pjs-orth"), outOrthLab = document.getElementById("pjs-orth-label");
+
+  var W = 480, H = 400, CX = 220, CY = 210, S = 55;
+  var a = { x: 1.2, y: 2.1 };   // the vector (geometric) / y = (y1, y2) (regression)
+  var b = { x: 2.4, y: 0.7 };   // spans the line (geometric) / the regressor x = (x1, x2)
+  var regression = false;
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+  function px(x, y) { return { x: CX + S * x, y: CY - S * y }; }
+  function dot(u, v) { return u.x * v.x + u.y * v.y; }
+
+  function line(p, q, color, width, dash) {
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    if (dash) ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  function arrow(from, to, color, width) {
+    line(from, to, color, width);
+    ctx.fillStyle = color;
+    var ang = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - 9 * Math.cos(ang - 0.42), to.y - 9 * Math.sin(ang - 0.42));
+    ctx.lineTo(to.x - 9 * Math.cos(ang + 0.42), to.y - 9 * Math.sin(ang + 0.42));
+    ctx.closePath(); ctx.fill();
+  }
+  function handle(p, color) {
+    ctx.fillStyle = color; ctx.globalAlpha = 0.3;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var borderLt = cssVar("--border-lt", "#EAEEF4");
+    var textMuted = cssVar("--text-muted", "#6B7280");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+    var text = cssVar("--text", "#0F1117");
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "11px " + cssVar("--font-body", "Inter, system-ui, sans-serif");
+
+    // Axes, faint.
+    line(px(-3.8, 0), px(4.6, 0), border, 1);
+    line(px(0, -3.4), px(0, 3.4), border, 1);
+
+    var bb = dot(b, b);
+    var t = bb > 1e-9 ? dot(a, b) / bb : 0;
+    var p = { x: t * b.x, y: t * b.y };       // the projection / fitted values
+    var r = { x: a.x - p.x, y: a.y - p.y };   // the residual
+    var bLen = Math.sqrt(bb) || 1;
+    var bHat = { x: b.x / bLen, y: b.y / bLen };
+
+    // The subspace line, through the origin along b.
+    line(px(-4.4 * bHat.x, -4.4 * bHat.y), px(4.4 * bHat.x, 4.4 * bHat.y), borderLt, 1.6);
+
+    // Projection vector along the line (thick, pale) and residual (dashed).
+    var o = px(0, 0), tipA = px(a.x, a.y), tipP = px(p.x, p.y), tipB = px(b.x, b.y);
+    line(o, tipP, accentDark, 5, null); ctx.globalAlpha = 1;
+    ctx.save(); ctx.globalAlpha = 0.35;
+    line(o, tipP, accentDark, 5, null);
+    ctx.restore();
+    line(tipA, tipP, textMuted, 1.4, [4, 4]);
+
+    // Right-angle marker at the foot (skip when residual is tiny).
+    var rLen = Math.sqrt(dot(r, r));
+    if (rLen > 0.12) {
+      var rHat = { x: r.x / rLen, y: r.y / rLen };
+      var s = 0.22;
+      var sgn = (dot({ x: a.x, y: a.y }, { x: -bHat.y, y: bHat.x }) >= 0) ? 1 : -1;
+      var m1 = px(p.x - s * bHat.x * (t >= 0 ? 1 : -1), p.y - s * bHat.y * (t >= 0 ? 1 : -1));
+      var m2 = px(p.x - s * bHat.x * (t >= 0 ? 1 : -1) + s * rHat.x, p.y - s * bHat.y * (t >= 0 ? 1 : -1) + s * rHat.y);
+      var m3 = px(p.x + s * rHat.x, p.y + s * rHat.y);
+      line(m1, m2, textMuted, 1.2);
+      line(m2, m3, textMuted, 1.2);
+    }
+
+    // The vector itself, and the b handle.
+    arrow(o, tipA, accent, 2.5);
+    handle(tipA, accent);
+    handle(tipB, accentDark);
+    ctx.fillStyle = accentDark;
+    ctx.beginPath(); ctx.arc(tipB.x, tipB.y, 3.2, 0, Math.PI * 2); ctx.fill();
+
+    // Labels, by mode.
+    ctx.fillStyle = accent; ctx.textAlign = "left"; ctx.font = "600 12px " + cssVar("--font-body", "Inter, sans-serif");
+    ctx.fillText(regression ? "y" : "a", tipA.x + 10, tipA.y - 8);
+    ctx.fillStyle = accentDark;
+    ctx.fillText(regression ? "x (regressor)" : "b", tipB.x + 10, tipB.y + 16);
+    ctx.fillText(regression ? "ŷ" : "projᵦ(a)", tipP.x + 8, tipP.y + 18);
+    ctx.fillStyle = cssVar("--text-muted", "#6B7280");
+    ctx.font = "11px " + cssVar("--font-body", "Inter, sans-serif");
+    var midR = px(a.x - r.x / 2, a.y - r.y / 2);
+    ctx.fillText(regression ? "e" : "residual", midR.x + 8, midR.y);
+
+    // Regression inset: the same two observations as the familiar scatter.
+    if (regression) {
+      var bx = 316, by = 18, bw = 148, bh = 122;
+      ctx.fillStyle = cssVar("--surface", "#F2F4F8");
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.strokeStyle = border; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
+      var R = 3.4; // data range shown in the inset
+      function ipt(vx, vy) {
+        return { x: bx + 8 + (vx + R) / (2 * R) * (bw - 16), y: by + bh - 10 - (vy + R) / (2 * R) * (bh - 20) };
+      }
+      // fitted line y = t * x across the inset
+      line(ipt(-R, -R * t), ipt(R, R * t), accentDark, 1.4);
+      // two observations (x_i, y_i) with vertical residual drops
+      [[b.x, a.x], [b.y, a.y]].forEach(function(ob) {
+        var pt = ipt(ob[0], ob[1]);
+        var ft = ipt(ob[0], t * ob[0]);
+        line(pt, ft, textMuted, 1, [3, 3]);
+        ctx.fillStyle = accent;
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.4, 0, Math.PI * 2); ctx.fill();
+      });
+      ctx.fillStyle = textDim; ctx.font = "9px " + cssVar("--font-mono", "monospace");
+      ctx.textAlign = "left";
+      ctx.fillText("the same numbers, as a scatter", bx + 8, by + bh + 12);
+      ctx.fillText("slope = " + t.toFixed(2), bx + 8, by + 12);
+    }
+  }
+
+  function update() {
+    var bb = dot(b, b);
+    var t = bb > 1e-9 ? dot(a, b) / bb : 0;
+    var p = { x: t * b.x, y: t * b.y };
+    var r = { x: a.x - p.x, y: a.y - p.y };
+    if (regression) {
+      outCoefLab.textContent = "β̂ = x·y / x·x";
+      outRnormLab.textContent = "‖e‖";
+      outOrthLab.textContent = "e · x";
+      story.textContent = "ŷ is the projection of y onto the regressor — OLS is this picture";
+      modeBtn.textContent = "← Back to geometry";
+    } else {
+      outCoefLab.textContent = "a·b / b·b";
+      outRnormLab.textContent = "‖residual‖";
+      outOrthLab.textContent = "residual · b";
+      story.textContent = "the projection is the closest point on the line";
+      modeBtn.textContent = "Relabel as regression →";
+    }
+    outCoef.textContent = t.toFixed(2);
+    outRnorm.textContent = Math.sqrt(dot(r, r)).toFixed(2);
+    outOrth.textContent = Math.abs(dot(r, b)) < 0.005 ? "0.00" : dot(r, b).toFixed(2);
+    draw();
+  }
+
+  modeBtn.addEventListener("click", function() {
+    regression = !regression;
+    modeBtn.setAttribute("aria-pressed", String(regression));
+    update();
+  });
+
+  // Dragging: nearest of the two handles within reach.
+  var dragging = null;
+  function unitCoords(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) * (W / rect.width) - CX) / S,
+      y: (CY - (clientY - rect.top) * (H / rect.height)) / S
+    };
+  }
+  function startDrag(clientX, clientY, e) {
+    var u = unitCoords(clientX, clientY);
+    var da = Math.hypot(u.x - a.x, u.y - a.y);
+    var db = Math.hypot(u.x - b.x, u.y - b.y);
+    if (Math.min(da, db) > 0.4) return;
+    dragging = da <= db ? "a" : "b";
+    e.preventDefault();
+  }
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    var u = unitCoords(clientX, clientY);
+    var clamp = function(v) { return Math.max(-3.2, Math.min(3.2, Math.round(v * 20) / 20)); };
+    var target = dragging === "a" ? a : b;
+    target.x = clamp(u.x); target.y = clamp(u.y);
+    if (dragging === "b" && Math.hypot(b.x, b.y) < 0.3) { b.x = 0.3; } // keep the line defined
+    update();
+  }
+  canvas.addEventListener("mousedown", function(e) { startDrag(e.clientX, e.clientY, e); });
+  document.addEventListener("mousemove", function(e) { if (dragging) moveDrag(e.clientX, e.clientY); });
+  document.addEventListener("mouseup", function() { dragging = null; });
+  canvas.addEventListener("touchstart", function(e) { startDrag(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive: false });
+  canvas.addEventListener("touchmove", function(e) { if (dragging) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = null; });
+
+  // Keyboard: arrows move the vector; [ and ] rotate the line.
+  canvas.addEventListener("keydown", function(e) {
+    var step = 0.1;
+    if (e.key === "ArrowLeft") a.x = Math.max(-3.2, a.x - step);
+    else if (e.key === "ArrowRight") a.x = Math.min(3.2, a.x + step);
+    else if (e.key === "ArrowUp") a.y = Math.min(3.2, a.y + step);
+    else if (e.key === "ArrowDown") a.y = Math.max(-3.2, a.y - step);
+    else if (e.key === "[" || e.key === "]") {
+      var ang = Math.atan2(b.y, b.x) + (e.key === "]" ? 0.06 : -0.06);
+      var len = Math.hypot(b.x, b.y);
+      b.x = len * Math.cos(ang); b.y = len * Math.sin(ang);
+    }
+    else return;
+    e.preventDefault();
+    update();
+  });
+
+  update();
+})();
+</script>

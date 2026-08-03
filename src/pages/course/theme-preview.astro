@@ -12,11 +12,12 @@ import Base from '../../layouts/Base.astro';
 
       <div class="theme-switcher" id="theme-switcher">
         <span class="theme-switcher__label">Theme</span>
-        <button data-t="default" class="is-active">Blue Lagoon</button>
-        <button data-t="green">Canopy</button>
-        <button data-t="purple">Fusion</button>
-        <button data-t="red">Ember</button>
-        <button data-t="mono">Graphite</button>
+        <button data-t="default" data-pair="F2 · Royal Blue × Spring Green" class="is-active">Blue Lagoon</button>
+        <button data-t="green" data-pair="F8 · Forest × Hot Pink">Canopy</button>
+        <button data-t="purple" data-pair="F3 · Plum × Mint">Fusion</button>
+        <button data-t="red" data-pair="F5 · Burgundy × Aqua">Ember</button>
+        <button data-t="mono" data-pair="05 · Ink × Mint">Graphite</button>
+        <span id="theme-pair" style="flex-basis:100%; font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:0.06em;">Pair: F2 · Royal Blue × Spring Green — <span style="display:inline-block; width:120px; height:10px; border-radius:3px; vertical-align:middle; background:var(--grad-pair);"></span></span>
       </div>
 
       <header class="course-header">
@@ -126,6 +127,8 @@ import Base from '../../layouts/Base.astro';
         if (t === 'default') document.documentElement.removeAttribute('data-theme');
         else document.documentElement.setAttribute('data-theme', t);
         sw.querySelectorAll('button').forEach(function (x) { x.classList.toggle('is-active', x === b); });
+        var pair = document.getElementById('theme-pair');
+        if (pair) pair.firstChild.textContent = 'Pair: ' + b.getAttribute('data-pair') + ' — ';
       });
     })();
   </script>

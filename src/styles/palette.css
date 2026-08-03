@@ -77,34 +77,45 @@
    these remap the A/B pair so buttons, accent bars, status dots and
    secondary links follow the theme too. Set data-theme on <html>
    (Base.astro does this from the track record) and the entire
-   design system re-tints. Hues are provisional pending the
-   render-and-choose colour decision.
+   design system re-tints.
+
+   Pairs come from the palette-candidates design doc (v3/v4) and
+   follow its formula: A is a deep saturated authority that supports
+   white button text; B is a fresh saturated accent — never muted.
+   The base (no data-theme) pair is candidate F2, Royal Blue ×
+   Spring Green. Which pair each track gets is still the user's
+   render-and-choose call; these are the doc's closest matches
+   per ramp, not a final decision.
    ================================================================ */
 
+/* Fusion ramp — F3 · Plum × Mint */
 :root[data-theme="purple"] {
-  --c-a:      #6B2FA0;
-  --c-a-deep: #4A2272;
-  --c-b:      #E879F9;
-  --c-b-deep: #C026D3;
+  --c-a:      #6A1F5A;
+  --c-a-deep: #4C1640;
+  --c-b:      #5ED4A8;
+  --c-b-deep: #3BA87E;
 }
 
+/* Ember ramp — F5 · Burgundy × Aqua */
 :root[data-theme="red"] {
-  --c-a:      #B84040;
-  --c-a-deep: #7A2424;
-  --c-b:      #F59E0B;
-  --c-b-deep: #B45309;
+  --c-a:      #8A1F3B;
+  --c-a-deep: #66172C;
+  --c-b:      #3DDCE0;
+  --c-b-deep: #26AEB2;
 }
 
+/* Canopy ramp — F8 · Forest × Hot Pink */
 :root[data-theme="green"] {
-  --c-a:      #2A7055;
-  --c-a-deep: #225540;
-  --c-b:      #84CC16;
-  --c-b-deep: #4D7C0F;
+  --c-a:      #1F5F3D;
+  --c-a-deep: #16452C;
+  --c-b:      #E25890;
+  --c-b-deep: #C13A72;
 }
 
+/* Graphite ramp — 05 · Ink × Mint (black-led set) */
 :root[data-theme="mono"] {
-  --c-a:      #3A3A42;
-  --c-a-deep: #1A1A1E;
-  --c-b:      #848490;
-  --c-b-deep: #505058;
+  --c-a:      #1A1A1F;
+  --c-a-deep: #0C0C10;
+  --c-b:      #5ED4A8;
+  --c-b-deep: #3BA87E;
 }

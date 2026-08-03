@@ -66,7 +66,7 @@ const pageDescription = entry ? entry.data.description : description;
 const moduleHref = (m: CollectionEntry<'modules'>) => `/course/${m.id}/`;
 ---
 
-<Base title={pageTitle} description={pageDescription}>
+<Base title={pageTitle} description={pageDescription} theme={entry ? track?.data.theme : undefined}>
 
   <aside class="status-strip" aria-label="Page breadcrumb">
     <div class="status-strip-inner">

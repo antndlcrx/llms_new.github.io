@@ -69,3 +69,42 @@
 .btn-link-v3:hover {
   color: var(--c-b) !important;
 }
+
+/* ================================================================
+   Per-theme brand pairs (track identity)
+   ----------------------------------------------------------------
+   The ramp blocks in global.css remap the blue scale and neutrals;
+   these remap the A/B pair so buttons, accent bars, status dots and
+   secondary links follow the theme too. Set data-theme on <html>
+   (Base.astro does this from the track record) and the entire
+   design system re-tints. Hues are provisional pending the
+   render-and-choose colour decision.
+   ================================================================ */
+
+:root[data-theme="purple"] {
+  --c-a:      #6B2FA0;
+  --c-a-deep: #4A2272;
+  --c-b:      #E879F9;
+  --c-b-deep: #C026D3;
+}
+
+:root[data-theme="red"] {
+  --c-a:      #B84040;
+  --c-a-deep: #7A2424;
+  --c-b:      #F59E0B;
+  --c-b-deep: #B45309;
+}
+
+:root[data-theme="green"] {
+  --c-a:      #2A7055;
+  --c-a-deep: #225540;
+  --c-b:      #84CC16;
+  --c-b-deep: #4D7C0F;
+}
+
+:root[data-theme="mono"] {
+  --c-a:      #3A3A42;
+  --c-a-deep: #1A1A1E;
+  --c-b:      #848490;
+  --c-b-deep: #505058;
+}

@@ -1,0 +1,133 @@
+---
+// Temporary preview for the track-colour decision (build-order gate 1.3).
+// Renders representative course-page chrome under a live theme switcher.
+// Never linked from anywhere; delete once track colours are chosen.
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Theme preview" description="Track colour decision preview — all five ramps on one page.">
+
+  <div class="course-page">
+    <div class="course-content">
+
+      <div class="theme-switcher" id="theme-switcher">
+        <span class="theme-switcher__label">Theme</span>
+        <button data-t="default" class="is-active">Blue Lagoon</button>
+        <button data-t="green">Canopy</button>
+        <button data-t="purple">Fusion</button>
+        <button data-t="red">Ember</button>
+        <button data-t="mono">Graphite</button>
+      </div>
+
+      <header class="course-header">
+        <p class="course-header__day">M1 · Mathematical Foundations · ~70 min</p>
+        <h1 class="course-header__title">Vectors as Meaning</h1>
+        <p class="course-header__desc">What a vector is, what the dot product measures, and why cosine similarity — not distance — is how machines compare texts.</p>
+        <p class="prereq-chips">
+          <span class="prereq-chips__label">Requires</span>
+          <a class="prereq-chip" href="#">Python Setup</a>
+          <span class="prereq-chip prereq-chip--planned">Matrices as Maps <span class="planned-tag">planned</span></span>
+        </p>
+        <p class="course-header__notebook" style="margin-top:18px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+          <a class="btn-primary" href="#">Play with this notebook in Colab <span class="arrow">→</span></a>
+          <a class="btn-link-v3" href="#">View on GitHub <span class="arrow">→</span></a>
+        </p>
+      </header>
+
+      <div class="prose">
+
+        <section class="opening-narrative">
+          <p class="lead-paragraph">Every method in this curriculum — embeddings, attention, fine-tuning — begins with the same move: text becomes points in a space, and questions about meaning become questions about geometry.</p>
+          <div class="key-takeaway">
+            <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+            <ol>
+              <li>Describe a vector geometrically and algebraically, and move between the two.</li>
+              <li>Give all three readings of the dot product and say when each is the useful one.</li>
+              <li>Explain why cosine similarity is used for text rather than Euclidean distance.</li>
+            </ol>
+          </div>
+        </section>
+
+        <section>
+          <h2>The Dot Product</h2>
+          <p>The dot product has three readings, and their equivalence is this section's payload. A survey respondent is a vector of answers; two similar respondents are near each other. The geometry was always there — nobody drew it.</p>
+
+          <div class="definition-box">
+            <p class="definition-box__term">Cosine similarity</p>
+            <p>The cosine of the angle between two vectors: direction without magnitude. A long document and a short one on the same topic should be similar — and cosine says they are.</p>
+          </div>
+
+          <div class="widget-wrap">
+            <p class="widget-eyebrow">Interactive</p>
+            <p class="widget-title">Vector Playground</p>
+            <p class="widget-intro">Drag both vectors. Watch the dot product pass through zero as you rotate past perpendicular — then normalise, and watch it become exactly the cosine.</p>
+            <div style="height:120px; display:flex; align-items:center; justify-content:center; border:1px dashed var(--border); border-radius:6px; color:var(--text-dim); font-family:var(--font-mono); font-size:11px;">widget canvas</div>
+          </div>
+
+          <div class="key-takeaway">
+            <p class="key-takeaway__label">Key Takeaway</p>
+            <p>Positive means aligned, zero means orthogonal — <em>unrelated</em>, which is the reading that matters for embeddings — and negative means opposed.</p>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+  </div>
+
+  <style is:global>
+    .theme-switcher {
+      position: sticky;
+      top: 70px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      background: var(--elevated, #fff);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .theme-switcher__label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+      margin-right: 6px;
+    }
+    .theme-switcher button {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text-sec);
+      cursor: pointer;
+    }
+    .theme-switcher button.is-active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+  </style>
+
+  <script is:inline>
+    (function () {
+      var sw = document.getElementById('theme-switcher');
+      if (!sw) return;
+      sw.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-t]');
+        if (!b) return;
+        var t = b.getAttribute('data-t');
+        if (t === 'default') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t);
+        sw.querySelectorAll('button').forEach(function (x) { x.classList.toggle('is-active', x === b); });
+      });
+    })();
+  </script>
+
+</Base>

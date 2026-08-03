@@ -8,15 +8,17 @@ import '../styles/site-v3.css';
 interface Props {
   title: string;
   description?: string;
+  /** Track colour token — re-tints the whole page via the data-theme ramps. */
+  theme?: 'default' | 'purple' | 'red' | 'green' | 'mono';
 }
 
-const { title, description = 'Research, teaching, and community for social scientists working with language models.' } = Astro.props;
+const { title, description = 'Research, teaching, and community for social scientists working with language models.', theme } = Astro.props;
 const fullTitle = title === 'Oxford LLMs' ? title : `${title} | Oxford LLMs`;
 
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme={theme && theme !== 'default' ? theme : undefined}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />

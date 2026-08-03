@@ -3,11 +3,404 @@ track: math
 order: 5
 id: M5
 title: Derivatives and the Chain Rule
-description: "A derivative is sensitivity, a gradient is the direction of steepest ascent — and backpropagation is the chain rule applied to a graph, once."
-objectives: []
+description: "A derivative is sensitivity — how much the output moves per unit of input — and backpropagation is the chain rule applied to a graph, once."
+objectives:
+  - Interpret a derivative as a sensitivity, and a regression coefficient as one.
+  - Compute partial derivatives, assemble a gradient, and argue why it points uphill.
+  - Apply the chain rule to a composition, and predict when long chains vanish or explode.
+  - Execute the forward and backward passes on a computational graph by hand.
+  - State the shape rule for gradients with respect to parameters, and use it to debug.
 prerequisites: [math/matrices]
-estimatedMinutes: 80
-status: planned
+seeAlso: []
+estimatedMinutes: 90
+status: draft
+widgets:
+  - chain-rule-stepper
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import ChainRuleStepper from '../../../components/widgets/ChainRuleStepper.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  sensDef: String.raw`For $f: \mathbb{R} \to \mathbb{R}$, the number $f'(x) = \lim_{h \to 0}\, \dfrac{f(x+h) - f(x)}{h}$: the ratio of output movement to input movement, as the nudge shrinks. Units carry through — if $x$ is euros and $f(x)$ is votes, $f'(x)$ is votes per euro.`,
+  linearApprox: String.raw`$$f(x + \Delta x) \;\approx\; f(x) + f'(x)\,\Delta x$$`,
+  linearApproxCaption: String.raw`The working form of the derivative: nudge the input by $\Delta x$ and the output moves by about $f'(x)\,\Delta x$. Everything in this module — and all of training — runs on this approximation.`,
+  gradDef: String.raw`For $f: \mathbb{R}^d \to \mathbb{R}$, the vector of partial sensitivities $\nabla f = \left( \dfrac{\partial f}{\partial x_1}, \ldots, \dfrac{\partial f}{\partial x_d} \right)$ — nudge one coordinate, hold the rest, record the rate; collect the answers. It is a vector in the input space, and it points in the direction of steepest ascent.`,
+  dirDeriv: String.raw`$$D_{\mathbf{u}} f \;=\; \nabla f \cdot \mathbf{u} \;=\; \lVert \nabla f \rVert \cos\theta \qquad (\mathbf{u} \text{ a unit vector})$$`,
+  dirDerivCaption: String.raw`The rate of change when stepping in direction $\mathbf{u}$ is a dot product — M1's machinery, verbatim. It is maximised when $\cos\theta = 1$: when $\mathbf{u}$ points along $\nabla f$. That <em>is</em> the steepest-ascent claim, argued rather than asserted.`,
+  chainRule: String.raw`$$\frac{dy}{dx} \;=\; \frac{dy}{du} \cdot \frac{du}{dx}$$`,
+  chainRuleCaption: String.raw`Rates compose by multiplication. If $u$ moves 3 units per unit of $x$, and $y$ moves 2 units per unit of $u$, then $y$ moves 6 units per unit of $x$ — conversion rates, chained.`,
+  pathsRule: String.raw`$$\frac{\partial L}{\partial v} \;=\; \sum_{\text{paths } v \to L} \;\prod_{\text{edges on path}} (\text{local derivative})$$`,
+  pathsRuleCaption: String.raw`The multivariate chain rule on a graph: the sensitivity of the output to any node is the product of local derivatives along each path between them, summed over paths. This sentence <em>is</em> backpropagation — D4 adds only the observation that computing it right-to-left reuses work.`,
+  wxRule: String.raw`$$\frac{\partial\, (W\mathbf{x})}{\partial \mathbf{x}} = W \qquad\qquad \frac{\partial\, (\mathbf{a} \cdot \mathbf{x})}{\partial \mathbf{x}} = \mathbf{a}$$`,
+  wxRuleCaption: String.raw`The two matrix-calculus facts that carry the whole curriculum. A linear map's sensitivity is the map itself — the multivariate version of "the derivative of $ax$ is $a$".`,
+  shapeRule: String.raw`$$\nabla_W L \;\text{ has the same shape as }\; W$$`,
+  shapeRuleCaption: String.raw`The shape rule: the gradient with respect to a parameter has the parameter's shape — one sensitivity number per adjustable number. The most useful debugging fact in the deep-learning track: if the shapes disagree, the computation is wrong, no further analysis needed.`,
+  jacApp: String.raw`For $f: \mathbb{R}^d \to \mathbb{R}^n$ — vector in, vector out — the derivative is the <strong>Jacobian</strong>, the $n \times d$ matrix of all partials $J_{ij} = \partial f_i / \partial x_j$. It is the best linear approximation of $f$ near the point: an M2 object. The chain rule for compositions of vector functions is <em>matrix multiplication of Jacobians</em> — which is why M2 insisted matmul is composition.`,
+  hessApp: String.raw`The <strong>Hessian</strong> is the $d \times d$ symmetric matrix of second partials — the sensitivities of the sensitivities. It measures <em>curvature</em>: how fast the gradient itself changes as you move. M4's eigenvector story applies to it directly, and M6 uses it to explain why some directions of a loss surface are treacherous and others flat.`,
+  taylorApp: String.raw`<strong>Taylor expansion:</strong> $f(x + \Delta) = f(x) + f'(x)\Delta + \tfrac{1}{2}f''(x)\Delta^2 + \cdots$ — the linear approximation plus correction terms. First order is usually enough because training takes <em>small</em> steps: the $\Delta^2$ term is tiny when $\Delta$ is, which is precisely why the learning rate (M6) must stay small for the linear story to hold.`,
+  layoutApp: String.raw`<strong>Layout conventions.</strong> Whether $\partial y / \partial \mathbf{x}$ is written as a row or a column (numerator vs denominator layout) is a bookkeeping convention, not a mathematical fact — sources disagree, and half of all matrix-calculus confusion is two texts silently using opposite conventions. This track uses denominator layout (gradients shaped like the thing varied), which is also what deep-learning frameworks return.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Differentiate each composition by hand, writing every factor of the chain explicitly before multiplying: (a)&nbsp;$y = (3x + 1)^2$; (b)&nbsp;$y = e^{-x^2}$; (c)&nbsp;$y = \log(1 + e^{x})$.</p>`,
+    solution: String.raw`<p>(a)&nbsp;Outer rate $2(3x+1)$, inner rate $3$: $y' = 6(3x+1)$. (b)&nbsp;Outer $e^{-x^2}$, inner $-2x$: $y' = -2x\,e^{-x^2}$. (c)&nbsp;Outer $1/(1+e^x)$, inner $e^x$: $y' = e^x/(1+e^x)$ — which is the sigmoid function $\sigma(x)$, a fact the deep-learning track reuses (the softplus's sensitivity is the sigmoid).</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Let $f(x_1, x_2) = x_1^2 x_2 + 3x_2$. Compute both partial derivatives, assemble $\nabla f$, and evaluate it at $(2, 1)$. In which direction does $f$ increase fastest from that point, and at what rate?</p>`,
+    solution: String.raw`<p>$\partial f/\partial x_1 = 2x_1 x_2$ and $\partial f/\partial x_2 = x_1^2 + 3$, so $\nabla f = (2x_1 x_2,\; x_1^2 + 3)$. At $(2,1)$: $\nabla f = (4, 7)$. Fastest increase is along $(4,7)$ (normalised: $(4,7)/\sqrt{65}$), at rate $\lVert \nabla f \rVert = \sqrt{65} \approx 8.06$ per unit step.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Hand-execute the widget's graph with $w = 1$, $x = 2$, $b = 0$, $y = 4$: forward values $m, s, r, L$, then the backward pass, recording every "arrived × local" product down to $\partial L/\partial w$, $\partial L/\partial x$, $\partial L/\partial b$, $\partial L/\partial y$. Check yourself against the widget.</p>`,
+    solution: String.raw`<p>Forward: $m = 2$, $s = 2$, $r = -2$, $L = 4$. Backward: $\partial L/\partial L = 1$; square node: $1 \times 2r = -4$, so $\partial L/\partial r = -4$; subtraction: $\partial L/\partial s = -4 \times 1 = -4$, $\partial L/\partial y = -4 \times (-1) = 4$; add node copies: $\partial L/\partial m = \partial L/\partial b = -4$; multiply node: $\partial L/\partial w = -4 \times x = -8$, $\partial L/\partial x = -4 \times w = -4$. Interpretation check: the prediction is 2, the target 4 — increasing $w$ raises the prediction toward the target, so the loss <em>falls</em> as $w$ rises, and the negative sign says exactly that.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Why does the gradient point in the direction of steepest ascent? Argue it — using M1's reading of the dot product — rather than asserting it.</p>`,
+    solution: String.raw`<p>Stepping one unit in direction $\mathbf{u}$ changes $f$ at rate $D_{\mathbf{u}}f = \nabla f \cdot \mathbf{u}$ — each coordinate of the step buys its partial's worth of change, and the dot product totals the purchases. By M1's geometric reading, $\nabla f \cdot \mathbf{u} = \lVert \nabla f \rVert \cos\theta$ for unit $\mathbf{u}$, which is maximised precisely when $\theta = 0$ — when $\mathbf{u}$ points along $\nabla f$. So "the gradient points uphill" is the statement that a dot product is maximised by alignment: M1, applied once.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>A chain of ten composed functions has local derivatives each approximately $0.5$. What is the end-to-end sensitivity? What if each local derivative is approximately $2$? Name both failure modes and say where the deep-learning track meets them.</p>`,
+    solution: String.raw`<p>Rates compose by multiplication: $0.5^{10} \approx 0.001$ — the input barely reaches the output, a <em>vanishing gradient</em>. And $2^{10} = 1024$ — a thousandfold amplification, an <em>exploding gradient</em>. Both are the same fact (products of many factors run to extremes unless the factors sit near 1), and both arrive in D7 as the reason recurrent networks failed on long sequences — and therefore, ultimately, why attention was invented.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Why must the gradient of the loss with respect to a parameter matrix $W$ have the same shape as $W$ itself?</p>`,
+    solution: String.raw`<p>Because the gradient answers one question per adjustable number: "if I nudge <em>this</em> entry, how much does the loss move?" $W$ has $n \times d$ adjustable numbers, so there are exactly $n \times d$ answers, naturally arranged in the same grid. Anything else would either miss a sensitivity or invent one — which is why a shape mismatch between a parameter and its gradient is not a warning but a proof that the computation is wrong.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Derive $\partial(\mathbf{x}^\top A \mathbf{x})/\partial \mathbf{x} = 2A\mathbf{x}$ for symmetric $A$, from first principles: expand $f(\mathbf{x} + \mathbf{h})$ for a small nudge $\mathbf{h}$, and identify the linear term.</p>`,
+    solution: String.raw`<p>$f(\mathbf{x}+\mathbf{h}) = (\mathbf{x}+\mathbf{h})^\top A(\mathbf{x}+\mathbf{h}) = \mathbf{x}^\top A\mathbf{x} + \mathbf{x}^\top A\mathbf{h} + \mathbf{h}^\top A\mathbf{x} + \mathbf{h}^\top A\mathbf{h}$. The middle terms are both scalars, and a scalar equals its own transpose: $\mathbf{x}^\top A\mathbf{h} = (\mathbf{x}^\top A\mathbf{h})^\top = \mathbf{h}^\top A^\top \mathbf{x} = \mathbf{h}^\top A\mathbf{x}$ using symmetry. So $f(\mathbf{x}+\mathbf{h}) = f(\mathbf{x}) + \mathbf{h}^\top (2A\mathbf{x}) + O(\lVert\mathbf{h}\rVert^2)$: the linear coefficient of the nudge — the definition of the gradient — is $2A\mathbf{x}$. (For non-symmetric $A$ the same steps give $(A + A^\top)\mathbf{x}$, a good check that symmetry was actually used.)</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    Training a model means adjusting millions of numbers, each in the direction that reduces a
+    loss — which requires knowing, for every single parameter, how much the loss would move if
+    that parameter were nudged. This module builds the machine that answers all of those
+    questions at once. It has two parts, and you own more of both than you may think: the
+    derivative, which your statistics training has been using under the name <em>marginal
+    effect</em>, and the chain rule, which is nothing more than conversion rates multiplying.
+    Assembled on a graph, they are backpropagation — stated in full here, three modules before
+    the deep-learning track says the word.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Interpret a derivative as a sensitivity, and a regression coefficient as one.</li>
+      <li>Compute partial derivatives, assemble a gradient, and argue why it points uphill.</li>
+      <li>Apply the chain rule to a composition, and predict when long chains vanish or explode.</li>
+      <li>Execute the forward and backward passes on a computational graph by hand.</li>
+      <li>State the shape rule for gradients with respect to parameters, and use it to debug.</li>
+    </ol>
+  </div>
+</section>
+
+## The Derivative You Already Use
+
+Start with an object from your own toolkit. In a linear regression, the coefficient on
+income answers a sensitivity question: <em>if income rises by one unit, how much does the
+outcome move?</em> You have interpreted thousands of these. A derivative is exactly that
+number, generalised: for any function, at any point,
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Derivative (as Sensitivity)</p>
+  <Tex tex={math.sensDef} />
+</div>
+
+For a linear model the sensitivity is the same everywhere — that is what "linear" means, and
+why a regression table can print one number per variable. For a nonlinear function the
+sensitivity is <em>local</em>: it holds at the point you asked about, for small nudges, and
+elsewhere it differs. That locality is not a defect; it is the working mode of everything
+that follows:
+
+<div class="formula-block">
+  <Tex tex={math.linearApprox} />
+  <Tex class="formula-block__caption" tex={math.linearApproxCaption} />
+</div>
+
+One framing is deliberately avoided here: <em>the derivative as the slope of a tangent line
+on a curve</em>. It is not wrong — it is the picture for one input and one output — but it
+does not survive the trip to a loss function over four thousand million parameters, where
+there is no curve to draw and no tangent to see. Sensitivity survives: "nudge this, how much
+does that move?" is askable in any number of dimensions, which is why it is the framing this
+track builds on.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    A colleague fits a logistic regression and reads a coefficient of 0.8 as "one more year of
+    education raises the probability of voting by 0.8 percentage points, for everyone." Two
+    things are wrong with that reading — and both are about this section. What are they?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        First, the units: 0.8 is a sensitivity on the log-odds scale, not the probability
+        scale — the derivative of a composed function, and the outer function (the logistic)
+        has its own rate. Second, "for everyone": the model is nonlinear in probability, so
+        the sensitivity is local — it depends on where each person sits on the curve, largest
+        near 50% and small at the extremes. Marginal effects at representative values exist
+        precisely because derivatives of nonlinear functions are local. You have been doing
+        this module's mathematics for years; it just had different names.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A derivative is a sensitivity: output movement per unit of input movement, locally. A
+    regression coefficient is one; a marginal effect is one. The tangent-line picture stays
+    behind in one dimension — sensitivity is the framing that scales.
+  </p>
+</div>
+
+## Partial Derivatives and the Gradient
+
+Real functions take many inputs — a loss takes millions. The move that tames them is
+embarrassingly simple: <strong>nudge one input, hold all the others still.</strong> The
+resulting one-at-a-time sensitivity is a partial derivative, and computing one uses no new
+mathematics — every other variable is treated as a constant, and the rules you just revised
+apply. Collect all the partials and you have the gradient:
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Gradient</p>
+  <Tex tex={math.gradDef} />
+</div>
+
+That last clause — <em>points in the direction of steepest ascent</em> — is the fact all of
+M6 rests on, so it deserves an argument rather than an assertion. Suppose you take a small
+unit-length step in some direction <strong>u</strong>. Each coordinate of the step buys you
+that coordinate's partial's worth of change, and the total is a sum of products — which M1
+taught you to recognise on sight:
+
+<div class="formula-block">
+  <Tex tex={math.dirDeriv} />
+  <Tex class="formula-block__caption" tex={math.dirDerivCaption} />
+</div>
+
+The rate of change in direction <strong>u</strong> is a <em>dot product</em> with the
+gradient, and a dot product with a unit vector is maximised by pointing it along the other
+vector — that was M1's geometric reading, verbatim. So the gradient points uphill because
+alignment maximises dot products; there is nothing more to it. The same line also reads
+downhill: step <em>against</em> the gradient and the dot product is as negative as possible,
+which is the entire idea M6 turns into gradient descent.
+
+<details class="appendix-box">
+  <summary>Appendix · directional derivatives, Taylor, and why first order is enough</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.taylorApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Partials are one-at-a-time sensitivities; the gradient collects them into a vector in
+    input space. It points uphill for an M1 reason: the rate of change in any direction is a
+    dot product with the gradient, and dot products are maximised by alignment.
+  </p>
+</div>
+
+## The Chain Rule: Rates Compose by Multiplication
+
+Models are compositions — a linear layer feeds a nonlinearity feeds another layer feeds a
+loss. The chain rule is the fact that makes compositions differentiable, and it is best met
+as something you already believe about conversion rates. If one euro buys 1.1 dollars, and
+one dollar buys 150 yen, then one euro buys 165 yen: <em>rates through a chain multiply.</em>
+
+<div class="formula-block">
+  <Tex tex={math.chainRule} />
+  <Tex class="formula-block__caption" tex={math.chainRuleCaption} />
+</div>
+
+Each factor is <em>local</em> — the sensitivity of one link to its immediate input, knowing
+nothing about the rest of the chain — and the end-to-end sensitivity is their product. That
+locality is what will make the whole machinery scale: no link ever needs the global picture.
+
+The multiplication also carries a warning that becomes a major theme two tracks from now.
+Multiply ten factors of 0.5 and the product is about 0.001; ten factors of 2 and it is a
+thousand. <strong>Long chains drive sensitivities to extremes</strong> unless the local rates
+sit near one — small signals die before reaching the far end, large ones blow up. Problem 5
+makes you compute it; D7 shows it killing recurrent networks on long sequences, and the
+architecture that fixed it — attention — is where this curriculum has been heading all along.
+The seed is planted here: it is nothing deeper than repeated multiplication.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    The chain rule is conversion rates multiplying: end-to-end sensitivity is the product of
+    local sensitivities, each computed knowing nothing beyond its own link. Products of many
+    factors run to extremes — the vanishing and exploding gradients of D7, three modules early.
+  </p>
+</div>
+
+## Computational Graphs
+
+Now the structural step that turns two small facts into the engine of deep learning. Any
+expression can be drawn as a <strong>graph</strong>: inputs enter, each node applies one
+elementary operation, and the output emerges. Draw it, and the chain rule stops being a
+formula and becomes traffic: sensitivities flow backwards along the edges, each edge
+multiplying by its local rate. Step through it:
+
+<ChainRuleStepper />
+
+Two things to notice while stepping — they are the module's punchline. First, <strong>every
+backward step is identical in form</strong>: what arrived from downstream, times the local
+derivative of this one node. The square node contributes 2r; the add node copies; the
+multiply node hands each input the <em>other</em> input as its rate. No step consults the
+global expression. Second, when paths branch, contributions <strong>add</strong> — the full
+rule for any graph:
+
+<div class="formula-block">
+  <Tex tex={math.pathsRule} />
+  <Tex class="formula-block__caption" tex={math.pathsRuleCaption} />
+</div>
+
+Read that caption again, because it is not a preview but the thing itself: this
+product-along-paths, sum-over-paths procedure <em>is</em> backpropagation. What D4 adds is an
+efficiency observation — sweeping the graph once from right to left computes every node's
+sensitivity while reusing shared path segments, instead of re-multiplying each path from
+scratch. The mathematics is complete on this page; the deep-learning track will only make the
+graph bigger.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Any expression is a graph; the sensitivity of the output to any node is the product of
+    local derivatives along each connecting path, summed over paths. Every step is local —
+    arrived times local rate — and that mechanicalness is why a machine can differentiate a
+    billion-parameter model without cleverness.
+  </p>
+</div>
+
+## Just Enough Matrix Calculus
+
+The graphs in real models carry vectors and matrices along their edges, not scalars — so the
+local rates become M2 objects. Two facts cover almost everything this curriculum needs:
+
+<div class="formula-block">
+  <Tex tex={math.wxRule} />
+  <Tex class="formula-block__caption" tex={math.wxRuleCaption} />
+</div>
+
+A linear map's sensitivity is the map itself — the grown-up version of "the derivative of
+<em>ax</em> is <em>a</em>" — and once you see that, a linear layer's backward pass is no
+mystery: what arrives from downstream gets multiplied by <em>W</em> (transposed, to make the
+shapes agree — which brings up the rule that matters most in practice):
+
+<div class="formula-block">
+  <Tex tex={math.shapeRule} />
+  <Tex class="formula-block__caption" tex={math.shapeRuleCaption} />
+</div>
+
+The reasoning is problem 6's, and it is worth internalising before ever writing training
+code: a gradient is one sensitivity per adjustable number, so it must have exactly the
+parameter's shape. When a framework reports a gradient of a different shape than its
+parameter, you do not have a subtle bug — you have a wrong computation, and the shapes just
+told you so for free. This is M2's type-system discipline extended to training, and it is
+the single most effective sanity check the deep-learning track will offer you.
+
+One honest note: how vector-by-vector derivatives are <em>written down</em> (row versus
+column arrangements) is a convention on which textbooks disagree, and silently mixing two
+conventions is a classic source of confusion. The appendix states the conventions properly;
+this track writes gradients in the shape of the thing varied, which is also what every major
+framework returns.
+
+<details class="appendix-box">
+  <summary>Appendix · Jacobians, Hessians, and layout conventions</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.jacApp} />
+    <Tex tex={math.hessApp} />
+    <Tex tex={math.layoutApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A linear map's derivative is the map itself, and a parameter's gradient has the
+    parameter's shape — one sensitivity per adjustable number. The shape rule is a free,
+    infallible bug detector, and it is M2's type system applied to training.
+  </p>
+</div>
+
+## Where This Lands
+
+Assemble the module. A neural network's loss is one enormous composed expression: linear
+layers (M2), nonlinearities, and a final loss node, drawn as a graph with millions of
+parameters among its inputs. Backpropagation — the procedure the widget stepped through, with
+the paths rule doing the bookkeeping and the matrix-calculus facts supplying the local
+rates — delivers <em>every parameter's sensitivity in one backward sweep</em>. Nothing else
+is needed: no formula per architecture, no global analysis, no insight at any node beyond
+"arrived times local".
+
+That is the module's landing, and it is deliberately anticlimactic. The mystique around
+backpropagation dissolves into three sentences you now own: derivatives are sensitivities;
+rates compose by multiplication, summing over branches; gradients wear their parameter's
+shape. What remains for the deep-learning track is engineering — doing this efficiently, at
+scale, and reading the failures (vanishing products, exploding products, dead units) that
+this module has already equipped you to predict. And one question is left deliberately open:
+knowing every parameter's downhill direction, <em>how far should you step?</em> That number —
+the learning rate — is the single knob of M6, and it has failure modes of its own.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Backpropagation is the chain rule applied to a graph, once: every parameter's sensitivity
+    from one backward sweep of local multiplications. The mathematics is complete here — the
+    deep-learning track adds scale, efficiency, and the reading of its failure modes.
+  </p>
+</div>
+
+## Problem Set
+
+The module's real assessment: seven problems, easy to hard, on paper first. Problem 3
+hand-executes the widget's graph — do it before checking yourself against the machine.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    A derivative is a sensitivity — output movement per unit input movement, locally — and
+    your statistics training has used it for years under the name marginal effect. Partial
+    derivatives are one-at-a-time sensitivities; the gradient collects them and points uphill
+    for an M1 reason: the rate of change in any direction is a dot product with the gradient,
+    and dot products are maximised by alignment. The chain rule is conversion rates
+    multiplying — local sensitivities compose into end-to-end ones, and long products run to
+    extremes, seeding D7's vanishing and exploding gradients. On a computational graph the
+    chain rule becomes backpropagation, stated in full: products of local derivatives along
+    paths, summed over branches, every step mechanical. Matrix calculus contributes two facts —
+    a linear map's derivative is itself, and a gradient wears its parameter's shape, the
+    curriculum's best free bug detector. The open question, planted for M6: the gradient gives
+    every parameter a direction; it does not say how far to step.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://www.3blue1brown.com/topics/calculus" target="_blank" rel="noopener">3Blue1Brown, <em>Essence of Calculus</em></a>: chapters 1–4 — the visual grounding for derivatives and the chain rule.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em></a>: chapter 5 — vector calculus at textbook depth, free online.</li>
+    <li><a href="https://colah.github.io/posts/2015-08-Backprop/" target="_blank" rel="noopener">Olah, <em>Calculus on Computational Graphs</em></a>: the paths-and-products picture of this module's fourth section, beautifully drawn.</li>
+    <li><a href="https://www.deeplearningbook.org/contents/mlp.html" target="_blank" rel="noopener">Goodfellow, Bengio &amp; Courville, <em>Deep Learning</em>, §6.5</a>: backpropagation stated formally, for when D4 sends you back here.</li>
+  </ul>
+</section>

@@ -1,0 +1,208 @@
+---
+/**
+ * chain-rule-stepper (M5) — a small computational graph, L = (wx + b − y)²,
+ * stepped forward (each node computes its value) and then backward (each
+ * edge lights with its local derivative and each node accumulates the
+ * product arriving from downstream). The insight it must deliver: the
+ * backward pass is mechanical — local derivative times what arrived,
+ * nothing global anywhere.
+ * Visual grammar (rounded nodes, value line + gradient badge, edge
+ * highlighting, Step/Reset controls) is deliberately shared with the
+ * future backprop-stepper (D4): same picture, bigger network.
+ * Hand-rolled SVG, no libraries. All ids crs-prefixed (never a heading
+ * slug — see the ProblemSet id-collision lesson).
+ */
+---
+
+<div class="widget-wrap" id="chain-rule-stepper">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">The Chain Rule, Stepped</p>
+  <p class="widget-intro">
+    One tiny computation — a prediction error, squared — as a graph. Step forward to compute
+    it, then keep stepping and watch the derivative flow <em>backwards</em>: every step is a
+    local derivative times whatever arrived from downstream. No step knows anything global.
+  </p>
+
+  <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455);">
+    <label>w <input type="number" id="crs-in-w" value="2" step="0.5" aria-label="Weight w" style="width:54px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:11px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);"></label>
+    <label>x <input type="number" id="crs-in-x" value="3" step="0.5" aria-label="Input x" style="width:54px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:11px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);"></label>
+    <label>b <input type="number" id="crs-in-b" value="1" step="0.5" aria-label="Bias b" style="width:54px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:11px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);"></label>
+    <label>y <input type="number" id="crs-in-y" value="5" step="0.5" aria-label="Target y" style="width:54px; padding:3px 5px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:11px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);"></label>
+    <button id="crs-step" style="font-family:var(--font-mono); font-size:11px; padding:6px 16px; border:1px solid var(--accent, #2D8ABF); border-radius:4px; background:var(--accent, #2D8ABF); color:#fff; cursor:pointer;">Step ▸</button>
+    <button id="crs-reset" style="font-family:var(--font-mono); font-size:11px; padding:6px 12px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text-sec, #3D4455); cursor:pointer;">Reset</button>
+  </div>
+
+  <div class="visual-diagram" style="margin:0 0 4px;">
+    <svg id="crs-svg" viewBox="0 0 520 330" width="520" height="330" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-body, Inter, system-ui, sans-serif); font-size: 11px; width:100%; max-width:520px; height:auto; display:block; margin:0 auto;">
+      <defs>
+        <marker id="crsArrF" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--text-dim, #9CA3AF)"/></marker>
+      </defs>
+
+      <!-- edges: id crs-e-{from}{to} ; label id crs-el-{from}{to} -->
+      <line id="crs-e-wm" x1="92" y1="62"  x2="168" y2="92"  style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-xm" x1="92" y1="132" x2="168" y2="102" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-ms" x1="232" y1="97" x2="268" y2="135" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-bs" x1="92" y1="202" x2="268" y2="152" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-sr" x1="332" y1="150" x2="368" y2="188" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-yr" x1="92" y1="272" x2="368" y2="207" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+      <line id="crs-e-rL" x1="432" y1="198" x2="452" y2="150" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1.6" marker-end="url(#crsArrF)"/>
+
+      <!-- edge local-derivative labels (hidden until their backward step) -->
+      <text id="crs-el-rL" x="452" y="182" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×2r</text>
+      <text id="crs-el-sr" x="342" y="176" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×1</text>
+      <text id="crs-el-yr" x="230" y="250" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×(−1)</text>
+      <text id="crs-el-ms" x="242" y="123" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×1</text>
+      <text id="crs-el-bs" x="180" y="187" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×1</text>
+      <text id="crs-el-wm" x="128" y="68" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×x</text>
+      <text id="crs-el-xm" x="128" y="128" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">×w</text>
+
+      <!-- nodes: group with rect, name, value text, grad badge -->
+      <!-- inputs -->
+      <g id="crs-n-w"><rect x="28" y="45" width="64" height="34" rx="8" style="fill: var(--surface); stroke: var(--border);" stroke-width="1.4"/><text x="60" y="59" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">w</text><text id="crs-v-w" x="60" y="73" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">2</text><text id="crs-g-w" x="60" y="95" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂w = ?</text></g>
+      <g id="crs-n-x"><rect x="28" y="115" width="64" height="34" rx="8" style="fill: var(--surface); stroke: var(--border);" stroke-width="1.4"/><text x="60" y="129" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">x</text><text id="crs-v-x" x="60" y="143" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">3</text><text id="crs-g-x" x="60" y="165" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂x = ?</text></g>
+      <g id="crs-n-b"><rect x="28" y="185" width="64" height="34" rx="8" style="fill: var(--surface); stroke: var(--border);" stroke-width="1.4"/><text x="60" y="199" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">b</text><text id="crs-v-b" x="60" y="213" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">1</text><text id="crs-g-b" x="60" y="235" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂b = ?</text></g>
+      <g id="crs-n-y"><rect x="28" y="255" width="64" height="34" rx="8" style="fill: var(--surface); stroke: var(--border);" stroke-width="1.4"/><text x="60" y="269" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">y (target)</text><text id="crs-v-y" x="60" y="283" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">5</text><text id="crs-g-y" x="60" y="305" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂y = ?</text></g>
+      <!-- computed nodes -->
+      <g id="crs-n-m"><rect x="168" y="80" width="64" height="34" rx="8" style="fill: var(--card, #fff); stroke: var(--border);" stroke-width="1.4"/><text x="200" y="94" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">m = w·x</text><text id="crs-v-m" x="200" y="108" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">·</text><text id="crs-g-m" x="200" y="130" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂m = ?</text></g>
+      <g id="crs-n-s"><rect x="268" y="133" width="64" height="34" rx="8" style="fill: var(--card, #fff); stroke: var(--border);" stroke-width="1.4"/><text x="300" y="147" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">s = m + b</text><text id="crs-v-s" x="300" y="161" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">·</text><text id="crs-g-s" x="300" y="183" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂s = ?</text></g>
+      <g id="crs-n-r"><rect x="368" y="186" width="64" height="34" rx="8" style="fill: var(--card, #fff); stroke: var(--border);" stroke-width="1.4"/><text x="400" y="200" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">r = s − y</text><text id="crs-v-r" x="400" y="214" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">·</text><text id="crs-g-r" x="400" y="236" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂r = ?</text></g>
+      <g id="crs-n-L"><rect x="440" y="113" width="64" height="34" rx="8" style="fill: var(--card, #fff); stroke: var(--border);" stroke-width="1.4"/><text x="472" y="127" text-anchor="middle" font-size="10" style="fill: var(--text-muted);">L = r²</text><text id="crs-v-L" x="472" y="141" text-anchor="middle" font-weight="600" style="fill: var(--text, #0F1117);">·</text><text id="crs-g-L" x="472" y="163" text-anchor="middle" font-size="9.5" style="fill: var(--c-b-deep, #2DA85A);" opacity="0">∂L/∂L = 1</text></g>
+    </svg>
+  </div>
+
+  <p id="crs-narration" style="text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455); min-height:2.6em; margin: 6px auto 0; max-width: 520px;">
+    Set the inputs, then press <strong>Step</strong> to run the forward pass, node by node.
+  </p>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">
+    Forward: values flow left to right. Backward: gradients flow right to left, and each green
+    edge label is a <em>local</em> derivative — the only thing that edge ever needs to know.
+    A node's gradient is always <em>(what arrived from downstream) × (its local rate)</em>.
+    D4 shows the same picture with a real network in it; only the size changes.
+  </p>
+</div>
+
+<script is:inline>
+(function() {
+  var svg = document.getElementById("crs-svg");
+  if (!svg) return;
+  var el = function(id) { return document.getElementById(id); };
+  var stepBtn = el("crs-step"), resetBtn = el("crs-reset"), narr = el("crs-narration");
+  var ins = { w: el("crs-in-w"), x: el("crs-in-x"), b: el("crs-in-b"), y: el("crs-in-y") };
+
+  var step = 0;
+  var V = {}; // forward values
+  var G = {}; // gradients
+
+  function num(k) { var v = parseFloat(ins[k].value); return isNaN(v) ? 0 : v; }
+  function fmt(v) { return (Math.round(v * 100) / 100).toString(); }
+
+  function setVal(node, v) { el("crs-v-" + node).textContent = fmt(v); }
+  function setGrad(node, label) {
+    var g = el("crs-g-" + node);
+    g.textContent = label;
+    g.setAttribute("opacity", "1");
+  }
+  function nodeActive(node, mode) {
+    var rect = el("crs-n-" + node).querySelector("rect");
+    var accent = mode === "fwd" ? "var(--accent, #2D8ABF)" : "var(--c-b-deep, #2DA85A)";
+    rect.style.stroke = accent;
+    rect.setAttribute("stroke-width", "2.2");
+  }
+  function edgeActive(edge, mode) {
+    var e = el("crs-e-" + edge);
+    e.style.stroke = mode === "fwd" ? "var(--accent, #2D8ABF)" : "var(--c-b-deep, #2DA85A)";
+    e.setAttribute("stroke-width", "2.2");
+    var lbl = el("crs-el-" + edge);
+    if (mode === "bwd" && lbl) lbl.setAttribute("opacity", "1");
+  }
+
+  function reset() {
+    step = 0; V = {}; G = {};
+    ["m", "s", "r", "L"].forEach(function(n) { el("crs-v-" + n).textContent = "·"; });
+    ["w", "x", "b", "y", "m", "s", "r", "L"].forEach(function(n) {
+      el("crs-g-" + n).setAttribute("opacity", "0");
+      var rect = el("crs-n-" + n).querySelector("rect");
+      rect.style.stroke = "var(--border)";
+      rect.setAttribute("stroke-width", "1.4");
+    });
+    ["wm", "xm", "ms", "bs", "sr", "yr", "rL"].forEach(function(e) {
+      el("crs-e-" + e).style.stroke = "var(--border-lt, #EAEEF4)";
+      el("crs-e-" + e).setAttribute("stroke-width", "1.6");
+      var lbl = el("crs-el-" + e);
+      if (lbl) lbl.setAttribute("opacity", "0");
+    });
+    ["w", "x", "b", "y"].forEach(function(k) { setVal(k, num(k)); });
+    stepBtn.disabled = false;
+    stepBtn.style.opacity = "1";
+    narr.innerHTML = "Set the inputs, then press <strong>Step</strong> to run the forward pass, node by node.";
+  }
+
+  var steps = [
+    function() { // 1: m
+      V.m = num("w") * num("x");
+      setVal("m", V.m); nodeActive("m", "fwd"); edgeActive("wm", "fwd"); edgeActive("xm", "fwd");
+      narr.textContent = "Forward: m = w·x = " + fmt(num("w")) + " × " + fmt(num("x")) + " = " + fmt(V.m) + ". The node only multiplies its two inputs.";
+    },
+    function() { // 2: s
+      V.s = V.m + num("b");
+      setVal("s", V.s); nodeActive("s", "fwd"); edgeActive("ms", "fwd"); edgeActive("bs", "fwd");
+      narr.textContent = "Forward: s = m + b = " + fmt(V.m) + " + " + fmt(num("b")) + " = " + fmt(V.s) + ". This is the model's prediction, wx + b.";
+    },
+    function() { // 3: r
+      V.r = V.s - num("y");
+      setVal("r", V.r); nodeActive("r", "fwd"); edgeActive("sr", "fwd"); edgeActive("yr", "fwd");
+      narr.textContent = "Forward: r = s − y = " + fmt(V.s) + " − " + fmt(num("y")) + " = " + fmt(V.r) + " — the prediction error.";
+    },
+    function() { // 4: L
+      V.L = V.r * V.r;
+      setVal("L", V.L); nodeActive("L", "fwd"); edgeActive("rL", "fwd");
+      narr.textContent = "Forward: L = r² = " + fmt(V.L) + ". Forward pass complete — keep stepping to send the derivative backwards.";
+    },
+    function() { // 5: seed
+      G.L = 1;
+      setGrad("L", "∂L/∂L = 1"); nodeActive("L", "bwd");
+      narr.textContent = "Backward: seed with ∂L/∂L = 1. The loss moves one-for-one with itself — the only free fact.";
+    },
+    function() { // 6: r
+      G.r = G.L * 2 * V.r;
+      setGrad("r", "∂L/∂r = " + fmt(G.r)); nodeActive("r", "bwd"); edgeActive("rL", "bwd");
+      narr.textContent = "Backward: the square node's local rate is 2r = " + fmt(2 * V.r) + ". Arrived × local: 1 × " + fmt(2 * V.r) + " = " + fmt(G.r) + ".";
+    },
+    function() { // 7: s
+      G.s = G.r * 1;
+      setGrad("s", "∂L/∂s = " + fmt(G.s)); nodeActive("s", "bwd"); edgeActive("sr", "bwd");
+      narr.textContent = "Backward: subtraction's local rate w.r.t. s is 1. Arrived × local: " + fmt(G.r) + " × 1 = " + fmt(G.s) + ".";
+    },
+    function() { // 8: m and b
+      G.m = G.s * 1; G.b = G.s * 1;
+      setGrad("m", "∂L/∂m = " + fmt(G.m)); setGrad("b", "∂L/∂b = " + fmt(G.b));
+      nodeActive("m", "bwd"); nodeActive("b", "bwd"); edgeActive("ms", "bwd"); edgeActive("bs", "bwd");
+      narr.textContent = "Backward: the add node copies its gradient to both inputs (local rates are 1 and 1): ∂L/∂m = ∂L/∂b = " + fmt(G.s) + ".";
+    },
+    function() { // 9: w and x
+      G.w = G.m * num("x"); G.x = G.m * num("w");
+      setGrad("w", "∂L/∂w = " + fmt(G.w)); setGrad("x", "∂L/∂x = " + fmt(G.x));
+      nodeActive("w", "bwd"); nodeActive("x", "bwd"); edgeActive("wm", "bwd"); edgeActive("xm", "bwd");
+      narr.textContent = "Backward: the multiply node's local rate w.r.t. each input is the other input: ∂L/∂w = " + fmt(G.m) + " × x = " + fmt(G.w) + ", ∂L/∂x = " + fmt(G.m) + " × w = " + fmt(G.x) + ".";
+    },
+    function() { // 10: y
+      G.y = G.r * -1;
+      setGrad("y", "∂L/∂y = " + fmt(G.y)); nodeActive("y", "bwd"); edgeActive("yr", "bwd");
+      narr.textContent = "Backward: subtraction's local rate w.r.t. y is −1: ∂L/∂y = " + fmt(G.r) + " × (−1) = " + fmt(G.y) + ". Done — every input has its sensitivity, and no step used anything but arrived × local.";
+    }
+  ];
+
+  stepBtn.addEventListener("click", function() {
+    if (step < steps.length) {
+      steps[step]();
+      step += 1;
+      if (step === steps.length) { stepBtn.disabled = true; stepBtn.style.opacity = "0.45"; }
+    }
+  });
+  resetBtn.addEventListener("click", reset);
+  Object.keys(ins).forEach(function(k) { ins[k].addEventListener("input", reset); });
+
+  reset();
+})();
+</script>

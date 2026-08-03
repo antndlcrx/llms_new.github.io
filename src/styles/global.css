@@ -2664,15 +2664,55 @@ a.prereq-chip:hover {
 }
 .appendix-box__body p { font-size: 0.95em; }
 
-/* Problem sets — primary assessment for the math track (conventions §4). */
-.problem-set { margin: 24px 0; }
-.problem-set__problem {
+/* Problem sets — primary assessment for the math track (conventions §4).
+   Collapsed card; opens into a one-problem-at-a-time browser. */
+.problem-set {
+  margin: 28px 0;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--card, #fff);
-  padding: 16px 20px;
-  margin-bottom: 14px;
+  overflow: hidden;
 }
+.problem-set > summary {
+  cursor: pointer;
+  padding: 18px 22px;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  transition: background 0.15s ease;
+}
+.problem-set > summary:hover { background: var(--elevated, #fff); }
+.problem-set > summary::-webkit-details-marker { display: none; }
+.problem-set__eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent, #2D8ABF);
+}
+.problem-set__title {
+  font-weight: 700;
+  font-size: 1.05em;
+  color: var(--text, #0F1117);
+}
+.problem-set__title::after {
+  content: ' ▾';
+  font-size: 0.8em;
+  color: var(--text-dim, #9CA3AF);
+}
+.problem-set[open] .problem-set__title::after { content: ' ▴'; }
+.problem-set__meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.problem-set__body { border-top: 1px solid var(--border); }
+.problem-set__problem { padding: 20px 24px 8px; }
 .problem-set__heading {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -2684,6 +2724,51 @@ a.prereq-chip:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.problem-set__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 24px 16px;
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+.problem-set__nav-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-sec, #3D4455);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.problem-set__nav-btn:hover:not(:disabled) {
+  border-color: var(--accent, #2D8ABF);
+  color: var(--accent, #2D8ABF);
+}
+.problem-set__nav-btn:disabled { opacity: 0.35; cursor: default; }
+.problem-set__dots { display: flex; gap: 6px; align-items: center; }
+.problem-set__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--text-dim, #9CA3AF);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.problem-set__dot.is-active {
+  background: var(--accent, #2D8ABF);
+  border-color: var(--accent, #2D8ABF);
+}
+.problem-set__count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
 }
 .problem-tag {
   font-weight: 400;

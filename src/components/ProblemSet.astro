@@ -1,0 +1,89 @@
+---
+/**
+ * Problem-set browser (conventions §4). Collapsed by default; opening it
+ * reveals one problem at a time with prev/next navigation, a progress
+ * readout, and a per-problem solution reveal. Statements and solutions
+ * arrive as String.raw HTML (KaTeX-bearing) from the module's MDX.
+ * Without JS the problems render stacked — nothing is lost.
+ */
+interface Problem {
+  tag: 'mechanical' | 'conceptual' | 'extension';
+  statement: string;
+  solution: string;
+}
+interface Props {
+  problems: Problem[];
+}
+const { problems } = Astro.props;
+---
+
+<details class="problem-set" id="problem-set">
+  <summary>
+    <span class="problem-set__eyebrow">Assessment</span>
+    <span class="problem-set__title">Problem Set</span>
+    <span class="problem-set__meta">{problems.length} problems · easy → hard · solutions hidden until you commit</span>
+  </summary>
+
+  <div class="problem-set__body">
+    <div class="problem-set__panels">
+      {problems.map((p, i) => (
+        <div class="problem-set__problem" data-index={i}>
+          <p class="problem-set__heading">
+            Problem {i + 1} <span class="problem-tag">{p.tag}</span>
+          </p>
+          <div set:html={p.statement} />
+          <details class="problem-set__solution">
+            <summary>Solution</summary>
+            <div set:html={p.solution} />
+          </details>
+        </div>
+      ))}
+    </div>
+
+    <div class="problem-set__nav">
+      <button class="problem-set__nav-btn" id="ps-prev" aria-label="Previous problem">← Previous</button>
+      <span class="problem-set__dots" id="ps-dots" role="tablist" aria-label="Problems">
+        {problems.map((_, i) => (
+          <button class="problem-set__dot" data-goto={i} aria-label={`Problem ${i + 1}`}></button>
+        ))}
+      </span>
+      <span class="problem-set__count" id="ps-count">1 / {problems.length}</span>
+      <button class="problem-set__nav-btn" id="ps-next" aria-label="Next problem">Next →</button>
+    </div>
+  </div>
+</details>
+
+<script is:inline>
+(function() {
+  var root = document.getElementById("problem-set");
+  if (!root) return;
+  var panels = Array.prototype.slice.call(root.querySelectorAll(".problem-set__problem"));
+  var dots = Array.prototype.slice.call(root.querySelectorAll(".problem-set__dot"));
+  var prev = document.getElementById("ps-prev");
+  var next = document.getElementById("ps-next");
+  var count = document.getElementById("ps-count");
+  if (!panels.length || !prev || !next) return;
+  var i = 0;
+
+  function show(n) {
+    i = Math.max(0, Math.min(panels.length - 1, n));
+    panels.forEach(function(p, k) {
+      p.style.display = k === i ? "" : "none";
+      // Collapse revealed solutions when leaving a problem.
+      if (k !== i) { var s = p.querySelector(".problem-set__solution"); if (s) s.removeAttribute("open"); }
+    });
+    dots.forEach(function(d, k) { d.classList.toggle("is-active", k === i); });
+    count.textContent = (i + 1) + " / " + panels.length;
+    prev.disabled = i === 0;
+    next.disabled = i === panels.length - 1;
+  }
+
+  prev.addEventListener("click", function() { show(i - 1); });
+  next.addEventListener("click", function() { show(i + 1); });
+  dots.forEach(function(d) {
+    d.addEventListener("click", function() { show(parseInt(d.getAttribute("data-goto"), 10)); });
+  });
+
+  show(0);
+})();
+</script>

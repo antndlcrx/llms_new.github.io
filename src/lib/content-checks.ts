@@ -31,6 +31,7 @@ export const WIDGET_REGISTRY = new Set([
   'failure-modes-root',
   // specified for the math track
   'vector-playground',
+  'dimension-stepper',
   'matrix-transform-canvas',
   'projection-sandbox',
   'rank-slider',

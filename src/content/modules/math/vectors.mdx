@@ -17,12 +17,14 @@ seeAlso: []
 estimatedMinutes: 90
 status: draft
 widgets:
+  - dimension-stepper
   - vector-playground
 layer: spine
 ---
 
 import Tex from '../../../components/Tex.astro';
 import VectorPlayground from '../../../components/widgets/VectorPlayground.astro';
+import DimensionStepper from '../../../components/widgets/DimensionStepper.astro';
 import ProblemSet from '../../../components/ProblemSet.astro';
 
 export const math = {
@@ -125,23 +127,39 @@ export const problems = [
 
 ## What a Vector Is
 
-The misconception this module exists to fix: <strong>a vector is a list of numbers.</strong>
-It is not. A vector is a point in a space — or equivalently an arrow from the origin to that
-point — and the list of numbers is a <em>description</em> of it, written in a particular
-coordinate system. The distinction sounds pedantic and is not: the coordinates are how you
-store a vector; the geometry is what the vector <em>means</em>. Until the picture flips from
-"list" to "point," every later geometric argument passes through as vocabulary.
+Start where your data starts: with numbers, in order. A survey respondent answers two
+questions on a 1–7 scale — a 4 on the first, a 2 on the second. Write the answers down in a
+fixed order and you have a vector: <strong>x</strong> = (4, 2). That is the entire algebraic
+definition — <strong>an ordered list of numbers</strong>, one slot per measured thing. The
+order carries the meaning: slot one is question one, always. A document is a vector the same
+way (one slot per vocabulary word, counts as entries), and so is anything else you can measure
+along several dimensions at once.
 
-You already own the intuition. A survey respondent who answered a ten-question battery is
-a point in a ten-dimensional space — one axis per question, their answers as coordinates.
-Two respondents with similar politics sit near each other in that space. Nothing was added
-to the data by saying this; the geometry was always there. Nobody drew it.
+Now draw it. Two numbers are also the <em>coordinates of a point</em>: go 4 along a horizontal
+axis, then 2 up a vertical one, and mark the spot. The list has become a point in a plane —
+or, equally, an arrow from the origin to that point. Give the respondent a third question and
+the list grows to (4, 2, 7): three numbers, one more axis, a point floating in
+three-dimensional space. Same list, same drawing recipe, one more direction to move in. Step
+through it yourself:
 
-The same flip applies to every representation this curriculum meets: a document as word
-counts, a word as an embedding, a token halfway through a transformer — each is a point,
-and the numbers describing it are one choice of description among many. The appendix makes
-"one choice among many" precise; for the spine, hold the softer version: <em>the numbers
-serve the geometry, not the other way round.</em>
+<DimensionStepper />
+
+At the fourth number, the drawing stops — there is no fourth perpendicular axis to add.
+Notice what does <em>not</em> stop. The list still adds slot-by-slot. The length formula still
+squares, sums, and roots. Every operation this module builds works from the list alone, so
+none of them care whether a picture exists. The picture was always a courtesy — a visualisation
+of the first three slots of an object that lives happily in any number of dimensions. A
+768-dimensional embedding is exactly this: a list of 768 numbers, a point in a space nobody
+can draw, obeying the same rules you can check by hand at two.
+
+So which is the vector, <em>really</em> — the list or the point? Both, and the pairing is the
+point of this section: <strong>the list is how a vector is stored; the point is what it
+means.</strong> Treat the list as the whole story and every later geometric argument —
+similarity as angle, attention as projection, low-rank structure as flattened directions —
+passes through as vocabulary. Keep the point in view and those arguments become pictures. The
+same flip applies to every representation this curriculum meets; the appendix makes it precise
+(the same point has <em>many</em> lists, one per coordinate system), and the spine holds the
+softer version: <em>the numbers serve the geometry, not the other way round.</em>
 
 <div class="stop-and-think">
   <div class="stop-and-think__header">
@@ -180,9 +198,11 @@ serve the geometry, not the other way round.</em>
 <div class="key-takeaway">
   <p class="key-takeaway__label">Key Takeaway</p>
   <p>
-    A vector is a point or direction in a space; the coordinates are a description of it, not
-    the thing itself. Your data was always geometric — embedding methods did not add the
-    geometry, they learned <em>where to put the points</em>.
+    A vector is an ordered list of numbers <em>and</em> a point in space — two descriptions of
+    one object. The list is how it is stored and computed with; the point is what it means; and
+    the arithmetic works in 768 dimensions exactly as it does in the two you can draw. Your
+    data was always geometric — embedding methods did not add the geometry, they learned
+    <em>where to put the points</em>.
   </p>
 </div>
 
@@ -441,8 +461,8 @@ So the practical rule for retrieval systems: <em>normalise, then the choice of m
 mattering.</em> The disagreement between distance and cosine was never about the metrics — it
 was about whether magnitude belongs in the measurement.
 
-<strong>Now for the honest warning.</strong> Everything so far was drawn in two dimensions, and
-your intuition happily extends it to three. Embedding spaces have hundreds or thousands of
+<strong>Now for the honest warning.</strong> Everything so far was drawn in two or three
+dimensions — the stepper's first stages — and your intuition happily lives there. Embedding spaces have hundreds or thousands of
 dimensions, and high-dimensional geometry is not just "3D with more axes" — some of your
 intuitions transfer and some fail in ways that matter for practice. The flagship failure:
 pick two directions <em>at random</em> in 768 dimensions, and they will be almost exactly

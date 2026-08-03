@@ -1,0 +1,283 @@
+---
+/**
+ * dimension-stepper (M1) — the same ordered list of numbers rendered at
+ * d = 1 (number line), d = 2 (plane), d = 3 (orbitable 3D view), and
+ * d = 768 (no picture — the arithmetic continues without one).
+ * Sliders set the first three coordinates; the norm updates at every
+ * stage. The 3D stage is drag-to-orbit (mouse, touch, or arrow keys),
+ * drawn on canvas with a hand-rolled orthographic projection — no
+ * libraries, per the widget contract.
+ */
+---
+
+<div class="widget-wrap" id="dimension-stepper">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">From Numbers to Arrows</p>
+  <p class="widget-intro">
+    One list of numbers, four ways of looking at it. Set the coordinates with the sliders,
+    then step through the dimensions: a number line, a plane, a space you can spin —
+    and then 768 dimensions, where the picture gives up and the arithmetic does not.
+  </p>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;" role="group" aria-label="Dimension">
+    <button class="ds-stage" data-d="1" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec, #3D4455); cursor: pointer;">d = 1</button>
+    <button class="ds-stage" data-d="2" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec, #3D4455); cursor: pointer;">d = 2</button>
+    <button class="ds-stage" data-d="3" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec, #3D4455); cursor: pointer;">d = 3</button>
+    <button class="ds-stage" data-d="768" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec, #3D4455); cursor: pointer;">d = 768</button>
+  </div>
+
+  <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-sec, #3D4455);">
+    <label id="ds-lab-1" style="display:flex; align-items:center; gap:8px;">x<sub>1</sub>
+      <input type="range" id="ds-x1" min="-3" max="3" step="0.1" value="2" aria-label="First coordinate" style="width:110px;">
+      <span id="ds-v1" style="min-width:34px; display:inline-block;">2.0</span>
+    </label>
+    <label id="ds-lab-2" style="display:flex; align-items:center; gap:8px;">x<sub>2</sub>
+      <input type="range" id="ds-x2" min="-3" max="3" step="0.1" value="1.5" aria-label="Second coordinate" style="width:110px;">
+      <span id="ds-v2" style="min-width:34px; display:inline-block;">1.5</span>
+    </label>
+    <label id="ds-lab-3" style="display:flex; align-items:center; gap:8px;">x<sub>3</sub>
+      <input type="range" id="ds-x3" min="-3" max="3" step="0.1" value="1.8" aria-label="Third coordinate" style="width:110px;">
+      <span id="ds-v3" style="min-width:34px; display:inline-block;">1.8</span>
+    </label>
+  </div>
+
+  <div class="visual-diagram" style="margin: 0 0 4px;">
+    <canvas id="ds-canvas" width="480" height="360" style="width:100%; max-width:480px; display:block; margin:0 auto; touch-action:none; outline-offset:2px;" tabindex="0" aria-label="Vector drawing. In the 3D stage, drag or use arrow keys to orbit the view."></canvas>
+    <div id="ds-ndpanel" style="display:none; max-width:480px; margin:0 auto; padding:22px 20px; border:1px dashed var(--border); border-radius:8px; font-family:var(--font-mono); font-size:12px; line-height:1.8; color:var(--text-sec, #3D4455);">
+      <span id="ds-ndvec"></span>
+      <p style="margin-top:14px; font-family:var(--font-body, inherit); font-size:13px; color:var(--text-muted);">
+        No fourth axis exists to draw, so the picture stops here — but nothing in the arithmetic
+        changed. The norm below is being computed over all 768 coordinates right now, by the same
+        rule you can check by hand at d&nbsp;=&nbsp;2. An embedding model hands you exactly this
+        object: a list too long to draw, obeying geometry you can still trust.
+      </p>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family: var(--font-mono); padding: 8px 0 2px;">
+    <span style="font-size:13px; color: var(--text-sec, #3D4455);">x&nbsp;=&nbsp;<span id="ds-vec">[2.0, 1.5]</span></span>
+    <span style="font-size:14px; font-weight:700; color: var(--text, #0F1117);">&#8214;x&#8214;&nbsp;=&nbsp;<span id="ds-norm">2.50</span></span>
+    <span id="ds-hint" style="font-size:10px; color: var(--text-dim, #9CA3AF);"></span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top: 10px;">
+    The same ordered list at every stage — only the number of axes changes. In the 3D view,
+    <strong>drag to orbit</strong>: the dashed lines drop the point onto the floor plane, which
+    is how a 2D drawing hides inside every 3D one.
+  </p>
+</div>
+
+<script is:inline>
+(function() {
+  var canvas = document.getElementById("ds-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var ndPanel = document.getElementById("ds-ndpanel");
+  var ndVec = document.getElementById("ds-ndvec");
+  var outVec = document.getElementById("ds-vec");
+  var outNorm = document.getElementById("ds-norm");
+  var hint = document.getElementById("ds-hint");
+  var sliders = [document.getElementById("ds-x1"), document.getElementById("ds-x2"), document.getElementById("ds-x3")];
+  var vals = [document.getElementById("ds-v1"), document.getElementById("ds-v2"), document.getElementById("ds-v3")];
+  var labs = [document.getElementById("ds-lab-1"), document.getElementById("ds-lab-2"), document.getElementById("ds-lab-3")];
+  var stages = Array.prototype.slice.call(document.querySelectorAll("#dimension-stepper .ds-stage"));
+
+  var d = 2;
+  var yaw = -0.7, pitch = 0.42;
+  var W = 480, H = 360, CX = 240, CY = 186, S = 50;
+
+  // Fixed tail for the d=768 stage: deterministic pseudo-random coordinates.
+  var tail = [];
+  var seed = 42;
+  for (var i = 0; i < 765; i++) {
+    seed = (seed * 9301 + 49297) % 233280;
+    tail.push((seed / 233280) * 4 - 2);
+  }
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  function coords() {
+    return sliders.map(function(s) { return parseFloat(s.value); });
+  }
+
+  function proj3(x, y, z) {
+    var cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    var X = cy * x + sy * z;
+    var Z = -sy * x + cy * z;
+    var Y = cp * y - sp * Z;
+    return { x: CX + S * X, y: CY - S * Y };
+  }
+
+  function arrow(x1, y1, x2, y2, color, width) {
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    var ang = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 9 * Math.cos(ang - 0.42), y2 - 9 * Math.sin(ang - 0.42));
+    ctx.lineTo(x2 - 9 * Math.cos(ang + 0.42), y2 - 9 * Math.sin(ang + 0.42));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function dashed(x1, y1, x2, y2, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function draw() {
+    var c = coords();
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var borderLt = cssVar("--border-lt", "#EAEEF4");
+    var textMuted = cssVar("--text-muted", "#6B7280");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "11px " + (cssVar("--font-body", "Inter, system-ui, sans-serif"));
+
+    if (d === 1) {
+      var y0 = 190;
+      ctx.strokeStyle = border; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(40, y0); ctx.lineTo(440, y0); ctx.stroke();
+      ctx.fillStyle = textMuted;
+      for (var t = -3; t <= 3; t++) {
+        var tx = CX + t * S;
+        ctx.strokeStyle = border;
+        ctx.beginPath(); ctx.moveTo(tx, y0 - 5); ctx.lineTo(tx, y0 + 5); ctx.stroke();
+        ctx.textAlign = "center";
+        ctx.fillText(String(t), tx, y0 + 20);
+      }
+      arrow(CX, y0, CX + c[0] * S, y0, accent, 2.5);
+      ctx.fillStyle = accent;
+      ctx.beginPath(); ctx.arc(CX + c[0] * S, y0, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.textAlign = "center"; ctx.fillStyle = accentDark;
+      ctx.fillText("one number = one position on a line", CX, y0 - 30);
+    } else if (d === 2) {
+      ctx.strokeStyle = borderLt; ctx.lineWidth = 1;
+      for (var g = -3; g <= 3; g++) {
+        ctx.beginPath(); ctx.moveTo(CX + g * S, CY - 3 * S); ctx.lineTo(CX + g * S, CY + 3 * S); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(CX - 3 * S, CY - g * S); ctx.lineTo(CX + 3 * S, CY - g * S); ctx.stroke();
+      }
+      ctx.strokeStyle = border;
+      ctx.beginPath(); ctx.moveTo(CX - 3.3 * S, CY); ctx.lineTo(CX + 3.3 * S, CY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(CX, CY - 3.3 * S); ctx.lineTo(CX, CY + 3.3 * S); ctx.stroke();
+      ctx.fillStyle = textMuted; ctx.textAlign = "left";
+      ctx.fillText("x₁", CX + 3.3 * S - 14, CY - 8);
+      ctx.fillText("x₂", CX + 8, CY - 3.3 * S + 12);
+      var px = CX + c[0] * S, py = CY - c[1] * S;
+      dashed(px, py, px, CY, textDim);
+      dashed(px, py, CX, py, textDim);
+      arrow(CX, CY, px, py, accent, 2.5);
+      ctx.fillStyle = accent;
+      ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = accentDark; ctx.textAlign = "left";
+      ctx.fillText("(" + c[0].toFixed(1) + ", " + c[1].toFixed(1) + ")", px + 10, py - 8);
+    } else if (d === 3) {
+      // floor grid on the x1–x3 plane (x2 = 0)
+      ctx.strokeStyle = borderLt; ctx.lineWidth = 1;
+      for (var g3 = -3; g3 <= 3; g3++) {
+        var a1 = proj3(g3, 0, -3), b1 = proj3(g3, 0, 3);
+        ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(b1.x, b1.y); ctx.stroke();
+        var a2 = proj3(-3, 0, g3), b2 = proj3(3, 0, g3);
+        ctx.beginPath(); ctx.moveTo(a2.x, a2.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+      }
+      // axes
+      var o = proj3(0, 0, 0);
+      var ax = proj3(3.4, 0, 0), ay = proj3(0, 3.4, 0), az = proj3(0, 0, 3.4);
+      ctx.strokeStyle = border; ctx.lineWidth = 1.4;
+      [[ax, "x₁"], [ay, "x₂"], [az, "x₃"]].forEach(function(pair) {
+        ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(pair[0].x, pair[0].y); ctx.stroke();
+        ctx.fillStyle = textMuted; ctx.textAlign = "center";
+        ctx.fillText(pair[1], pair[0].x, pair[0].y - 6);
+      });
+      // the vector, its floor shadow, and the riser
+      var tip = proj3(c[0], c[1], c[2]);
+      var foot = proj3(c[0], 0, c[2]);
+      dashed(o.x, o.y, foot.x, foot.y, textDim);
+      dashed(foot.x, foot.y, tip.x, tip.y, textDim);
+      arrow(o.x, o.y, tip.x, tip.y, accent, 2.5);
+      ctx.fillStyle = accent;
+      ctx.beginPath(); ctx.arc(tip.x, tip.y, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = accentDark; ctx.textAlign = "left";
+      ctx.fillText("(" + c[0].toFixed(1) + ", " + c[1].toFixed(1) + ", " + c[2].toFixed(1) + ")", tip.x + 10, tip.y - 8);
+    }
+  }
+
+  function norm() {
+    var c = coords();
+    var sq = c[0] * c[0] + c[1] * c[1];
+    if (d >= 3) sq += c[2] * c[2];
+    if (d === 768) for (var i = 0; i < tail.length; i++) sq += tail[i] * tail[i];
+    if (d === 1) sq = c[0] * c[0];
+    return Math.sqrt(sq);
+  }
+
+  function update() {
+    var c = coords();
+    for (var k = 0; k < 3; k++) vals[k].textContent = c[k].toFixed(1);
+    labs[1].style.display = d >= 2 ? "" : "none";
+    labs[2].style.display = d >= 3 ? "" : "none";
+    canvas.style.display = d === 768 ? "none" : "block";
+    ndPanel.style.display = d === 768 ? "block" : "none";
+    stages.forEach(function(b) {
+      var active = parseInt(b.getAttribute("data-d"), 10) === d;
+      b.style.borderColor = active ? cssVar("--accent", "#2D8ABF") : cssVar("--border", "#E2E6EE");
+      b.style.color = active ? cssVar("--accent", "#2D8ABF") : cssVar("--text-sec", "#3D4455");
+      b.setAttribute("aria-pressed", String(active));
+    });
+
+    if (d === 1) outVec.textContent = "[" + c[0].toFixed(1) + "]";
+    else if (d === 2) outVec.textContent = "[" + c[0].toFixed(1) + ", " + c[1].toFixed(1) + "]";
+    else if (d === 3) outVec.textContent = "[" + c[0].toFixed(1) + ", " + c[1].toFixed(1) + ", " + c[2].toFixed(1) + "]";
+    else outVec.textContent = "[" + c[0].toFixed(1) + ", " + c[1].toFixed(1) + ", " + c[2].toFixed(1) + ", … 763 more …]";
+
+    if (d === 768) {
+      var shown = [c[0], c[1], c[2]].concat(tail.slice(0, 5));
+      ndVec.textContent = "x = [ " + shown.map(function(v) { return v.toFixed(1); }).join(",  ") + ",  …  ]  — 768 coordinates";
+    }
+    hint.textContent = d === 3 ? "drag to orbit" : "";
+    outNorm.textContent = norm().toFixed(2);
+    if (d !== 768) draw();
+  }
+
+  sliders.forEach(function(s) { s.addEventListener("input", update); });
+  stages.forEach(function(b) {
+    b.addEventListener("click", function() { d = parseInt(b.getAttribute("data-d"), 10); update(); });
+  });
+
+  // Orbit (3D stage only)
+  var dragging = false, lastX = 0, lastY = 0;
+  function startDrag(x, y) { if (d === 3) { dragging = true; lastX = x; lastY = y; } }
+  function moveDrag(x, y) {
+    if (!dragging) return;
+    yaw += (x - lastX) * 0.01;
+    pitch = Math.max(0.05, Math.min(1.35, pitch + (y - lastY) * 0.01));
+    lastX = x; lastY = y;
+    draw();
+  }
+  canvas.addEventListener("mousedown", function(e) { startDrag(e.clientX, e.clientY); e.preventDefault(); });
+  document.addEventListener("mousemove", function(e) { moveDrag(e.clientX, e.clientY); });
+  document.addEventListener("mouseup", function() { dragging = false; });
+  canvas.addEventListener("touchstart", function(e) { startDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("touchmove", function(e) { if (dragging) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = false; });
+  canvas.addEventListener("keydown", function(e) {
+    if (d !== 3) return;
+    var step = 0.08;
+    if (e.key === "ArrowLeft") yaw -= step;
+    else if (e.key === "ArrowRight") yaw += step;
+    else if (e.key === "ArrowUp") pitch = Math.min(1.35, pitch + step);
+    else if (e.key === "ArrowDown") pitch = Math.max(0.05, pitch - step);
+    else return;
+    e.preventDefault();
+    draw();
+  });
+
+  update();
+})();
+</script>

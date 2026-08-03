@@ -20,6 +20,7 @@ layer: spine
 ---
 
 import Tex from '../../../components/Tex.astro';
+import VectorPlayground from '../../../components/widgets/VectorPlayground.astro';
 
 export const math = {
   normDef: String.raw`$$\lVert \mathbf{a} \rVert = \sqrt{a_1^2 + a_2^2 + \cdots + a_d^2}$$`,
@@ -219,7 +220,7 @@ embeddings the right reading of orthogonal is <em>unrelated</em> — not opposit
 to do with each other. Negative means opposed — pointing in contrary directions. Keep the
 three-way distinction; it recurs from attention scores to preference optimisation.
 
-{/* vector-playground widget lands here in increment 1.5 */}
+<VectorPlayground />
 
 <div class="key-takeaway">
   <p class="key-takeaway__label">Key Takeaway</p>
@@ -255,8 +256,9 @@ ignores that: it asks only whether they point the same way. The same logic runs 
 count vectors of classical text analysis to the dense embeddings of the LLMs track — the
 vectors changed, the comparison did not.
 
-Notice also what you get by combining this section with the last: <strong>for unit vectors,
-the dot product <em>is</em> the cosine similarity</strong> — the denominators are both 1 and
+Now go back to the playground above and press <strong>Normalise to unit length</strong>. The
+readout makes the point this section has been building to: <strong>for unit vectors, the dot
+product <em>is</em> the cosine similarity</strong> — the denominators are both 1 and
 disappear. This one-line fact is why real systems normalise their embeddings once and then use
 plain dot products for search: the cheap operation and the right-invariance operation become
 the same operation.

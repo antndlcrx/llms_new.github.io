@@ -1,0 +1,201 @@
+---
+/**
+ * vector-playground (M1) — two free draggable vectors with live dot product,
+ * cosine, angle, and projection readout, plus a normalise toggle.
+ * Extends day-1's cosine-explorer (one fixed vector) to two free vectors and
+ * adds the dot product as *signed* overlap. The insight it must deliver:
+ * rotating past perpendicular sends the dot product through zero and negative,
+ * visibly — and normalising makes the dot product exactly the cosine.
+ */
+---
+
+<div class="widget-wrap" id="vector-playground">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">Vector Playground</p>
+  <p class="widget-intro">
+    Drag either vector by its handle — angle and length both. Watch the dot product pass
+    through zero as the angle crosses 90&deg; and go negative beyond it. Then normalise both
+    vectors and watch the dot product become exactly the cosine.
+  </p>
+
+  <div class="visual-diagram" style="margin: 0 0 4px;">
+    <svg id="vp-svg" viewBox="0 0 480 400" width="480" height="400" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-body, Inter, system-ui, sans-serif); font-size: 11px; touch-action: none;">
+      <!-- Unit circle: where vector tips sit when normalised -->
+      <circle cx="240" cy="200" r="80" fill="none" style="stroke: var(--border-lt, #EAEEF4);" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="240" y="110" text-anchor="middle" style="fill: var(--text-dim, #9CA3AF);" font-size="9">unit circle</text>
+      <!-- Axes through origin -->
+      <line x1="30" y1="200" x2="450" y2="200" style="stroke: var(--border, #E2E6EE);" stroke-width="1"/>
+      <line x1="240" y1="20" x2="240" y2="380" style="stroke: var(--border, #E2E6EE);" stroke-width="1"/>
+      <!-- Angle arc between the vectors -->
+      <path id="vp-arc" d="" fill="none" style="stroke: var(--text-muted, #6B7280);" stroke-width="1" stroke-dasharray="3,2"/>
+      <!-- Projection of a onto b: segment along b plus the dropped perpendicular -->
+      <line id="vp-proj" x1="240" y1="200" x2="240" y2="200" style="stroke: var(--accent-dark, #1E5A8A);" stroke-width="5" opacity="0.35" stroke-linecap="round"/>
+      <line id="vp-perp" x1="240" y1="200" x2="240" y2="200" style="stroke: var(--text-muted, #6B7280);" stroke-width="1" stroke-dasharray="3,3"/>
+      <text id="vp-proj-label" x="0" y="0" style="fill: var(--accent-dark, #1E5A8A);" font-size="9" opacity="0.85">proj</text>
+      <!-- Vector a -->
+      <line id="vp-vec-a" x1="240" y1="200" x2="240" y2="200" style="stroke: var(--accent-dark, #1E5A8A);" stroke-width="2.5" marker-end="url(#vpArrA)"/>
+      <text id="vp-label-a" x="0" y="0" style="fill: var(--accent-dark, #1E5A8A);" font-weight="600" font-size="12">a</text>
+      <circle id="vp-handle-a" cx="240" cy="200" r="9" style="fill: var(--accent-dark, #1E5A8A); stroke: var(--accent-dark, #1E5A8A);" opacity="0.3" stroke-width="1.5" cursor="grab" tabindex="0" role="img" aria-label="Vector a handle. Drag, or use arrow keys: left and right rotate, up and down change length."/>
+      <!-- Vector b -->
+      <line id="vp-vec-b" x1="240" y1="200" x2="240" y2="200" style="stroke: var(--accent, #2D8ABF);" stroke-width="2.5" marker-end="url(#vpArrB)"/>
+      <text id="vp-label-b" x="0" y="0" style="fill: var(--accent, #2D8ABF);" font-weight="600" font-size="12">b</text>
+      <circle id="vp-handle-b" cx="240" cy="200" r="9" style="fill: var(--accent, #2D8ABF); stroke: var(--accent, #2D8ABF);" opacity="0.3" stroke-width="1.5" cursor="grab" tabindex="0" role="img" aria-label="Vector b handle. Drag, or use arrow keys: left and right rotate, up and down change length."/>
+      <!-- Instruction -->
+      <text x="240" y="14" text-anchor="middle" style="fill: var(--text-dim, #9CA3AF);" font-size="9">Drag both handles — angle and length. Keyboard: focus a handle, then arrow keys.</text>
+      <defs>
+        <marker id="vpArrA" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--accent-dark, #1E5A8A)"/></marker>
+        <marker id="vpArrB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--accent, #2D8ABF)"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div id="vp-readout" style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family: var(--font-mono); padding: 6px 0 2px;">
+    <span style="font-size:15px; font-weight:700; color: var(--text, #0F1117);">a&nbsp;&middot;&nbsp;b&nbsp;=&nbsp;<span id="vp-dot">0.00</span></span>
+    <span id="vp-verdict" style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color: var(--text-muted, #6B7280);">aligned</span>
+    <span style="font-size:12px; color: var(--text-sec, #3D4455);">cos&nbsp;&theta;&nbsp;=&nbsp;<span id="vp-cos">0.00</span></span>
+    <span style="font-size:12px; color: var(--text-sec, #3D4455);">&theta;&nbsp;=&nbsp;<span id="vp-angle">0</span>&deg;</span>
+    <span style="font-size:12px; color: var(--text-muted, #6B7280);">&#8214;a&#8214;&nbsp;=&nbsp;<span id="vp-lena">1.00</span></span>
+    <span style="font-size:12px; color: var(--text-muted, #6B7280);">&#8214;b&#8214;&nbsp;=&nbsp;<span id="vp-lenb">1.00</span></span>
+  </div>
+
+  <p style="text-align:center; margin: 8px 0 0;">
+    <button id="vp-normalise" aria-pressed="false" style="font-family: var(--font-mono); font-size: 11px; padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec, #3D4455); cursor: pointer;">Normalise to unit length</button>
+    <span id="vp-norm-note" style="display:none; margin-left: 10px; font-family: var(--font-mono); font-size: 10px; color: var(--accent, #2D8ABF);">a&nbsp;&middot;&nbsp;b now <em>equals</em> cos&nbsp;&theta;</span>
+  </p>
+
+  <p class="visual-diagram__caption" style="margin-top: 10px;">
+    The thick pale segment along <strong>b</strong> is the projection of <strong>a</strong> onto
+    <strong>b</strong>'s direction — the dot product's third reading. The dashed line is the
+    dropped perpendicular. Rotate <strong>a</strong> past 90&deg; and the projection flips to
+    the other side of the origin as the dot product goes negative.
+  </p>
+</div>
+
+<script is:inline>
+(function() {
+  var svg = document.getElementById("vp-svg");
+  if (!svg) return;
+  var el = function(id) { return document.getElementById(id); };
+  var handleA = el("vp-handle-a"), handleB = el("vp-handle-b");
+  var vecA = el("vp-vec-a"), vecB = el("vp-vec-b");
+  var labelA = el("vp-label-a"), labelB = el("vp-label-b");
+  var proj = el("vp-proj"), perp = el("vp-perp"), projLabel = el("vp-proj-label");
+  var arc = el("vp-arc");
+  var outDot = el("vp-dot"), outCos = el("vp-cos"), outAngle = el("vp-angle");
+  var outLenA = el("vp-lena"), outLenB = el("vp-lenb"), verdict = el("vp-verdict");
+  var normBtn = el("vp-normalise"), normNote = el("vp-norm-note");
+
+  var cx = 240, cy = 200, SCALE = 80;
+  var MIN_LEN = 0.35, MAX_LEN = 2.1;
+  // State: angles in screen radians, lengths in units.
+  var a = { ang: -35 * Math.PI / 180, len: 1.6 };
+  var b = { ang: -100 * Math.PI / 180, len: 1.2 };
+  var normalised = false;
+  var saved = null;
+
+  function tip(v) {
+    return { x: cx + v.len * SCALE * Math.cos(v.ang), y: cy + v.len * SCALE * Math.sin(v.ang) };
+  }
+
+  function update() {
+    var ta = tip(a), tb = tip(b);
+    vecA.setAttribute("x2", ta.x); vecA.setAttribute("y2", ta.y);
+    vecB.setAttribute("x2", tb.x); vecB.setAttribute("y2", tb.y);
+    handleA.setAttribute("cx", ta.x); handleA.setAttribute("cy", ta.y);
+    handleB.setAttribute("cx", tb.x); handleB.setAttribute("cy", tb.y);
+    labelA.setAttribute("x", ta.x + (ta.x >= cx ? 10 : -18));
+    labelA.setAttribute("y", ta.y + (ta.y >= cy ? 16 : -8));
+    labelB.setAttribute("x", tb.x + (tb.x >= cx ? 10 : -18));
+    labelB.setAttribute("y", tb.y + (tb.y >= cy ? 16 : -8));
+
+    var diff = b.ang - a.ang;
+    var cos = Math.cos(diff);
+    var deg = Math.abs(diff * 180 / Math.PI) % 360;
+    if (deg > 180) deg = 360 - deg;
+    var dot = a.len * b.len * cos;
+
+    // Projection of a onto b: scalar component along b-hat, in units.
+    var t = a.len * cos;
+    var fx = cx + t * SCALE * Math.cos(b.ang);
+    var fy = cy + t * SCALE * Math.sin(b.ang);
+    proj.setAttribute("x2", fx); proj.setAttribute("y2", fy);
+    perp.setAttribute("x1", ta.x); perp.setAttribute("y1", ta.y);
+    perp.setAttribute("x2", fx); perp.setAttribute("y2", fy);
+    projLabel.setAttribute("x", (cx + fx) / 2 + 8);
+    projLabel.setAttribute("y", (cy + fy) / 2 + 12);
+
+    // Angle arc between the two directions.
+    var ar = 34;
+    var startA = a.ang, endA = b.ang;
+    if (endA < startA) { var tmp = startA; startA = endA; endA = tmp; }
+    if (endA - startA > Math.PI) { var tmp2 = startA; startA = endA; endA = tmp2 + 2 * Math.PI; }
+    var sx = cx + ar * Math.cos(startA), sy = cy + ar * Math.sin(startA);
+    var ex = cx + ar * Math.cos(endA), ey = cy + ar * Math.sin(endA);
+    arc.setAttribute("d", "M" + sx + "," + sy + " A" + ar + "," + ar + " 0 0,1 " + ex + "," + ey);
+
+    outDot.textContent = dot.toFixed(2);
+    outCos.textContent = cos.toFixed(2);
+    outAngle.textContent = Math.round(deg);
+    outLenA.textContent = a.len.toFixed(2);
+    outLenB.textContent = b.len.toFixed(2);
+    if (Math.abs(cos) < 0.045) verdict.textContent = "≈ orthogonal — unrelated";
+    else if (dot > 0) verdict.textContent = "aligned";
+    else verdict.textContent = "opposed";
+  }
+
+  function setFromPointer(v, px, py) {
+    var rect = svg.getBoundingClientRect();
+    var mx = (px - rect.left) * (480 / rect.width);
+    var my = (py - rect.top) * (400 / rect.height);
+    v.ang = Math.atan2(my - cy, mx - cx);
+    if (!normalised) {
+      var d = Math.sqrt((mx - cx) * (mx - cx) + (my - cy) * (my - cy)) / SCALE;
+      v.len = Math.min(MAX_LEN, Math.max(MIN_LEN, d));
+    }
+    update();
+  }
+
+  var dragging = null;
+  function startDrag(v) { return function(e) { dragging = v; e.preventDefault(); }; }
+  handleA.addEventListener("mousedown", startDrag(a));
+  handleB.addEventListener("mousedown", startDrag(b));
+  handleA.addEventListener("touchstart", startDrag(a), { passive: false });
+  handleB.addEventListener("touchstart", startDrag(b), { passive: false });
+  document.addEventListener("mousemove", function(e) { if (dragging) setFromPointer(dragging, e.clientX, e.clientY); });
+  document.addEventListener("touchmove", function(e) { if (dragging) { e.preventDefault(); setFromPointer(dragging, e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  document.addEventListener("mouseup", function() { dragging = null; });
+  document.addEventListener("touchend", function() { dragging = null; });
+
+  function keyControl(v) {
+    return function(e) {
+      var step = 3 * Math.PI / 180;
+      if (e.key === "ArrowLeft") { v.ang -= step; }
+      else if (e.key === "ArrowRight") { v.ang += step; }
+      else if (e.key === "ArrowUp" && !normalised) { v.len = Math.min(MAX_LEN, v.len + 0.1); }
+      else if (e.key === "ArrowDown" && !normalised) { v.len = Math.max(MIN_LEN, v.len - 0.1); }
+      else return;
+      e.preventDefault();
+      update();
+    };
+  }
+  handleA.addEventListener("keydown", keyControl(a));
+  handleB.addEventListener("keydown", keyControl(b));
+
+  normBtn.addEventListener("click", function() {
+    normalised = !normalised;
+    if (normalised) {
+      saved = { a: a.len, b: b.len };
+      a.len = 1; b.len = 1;
+      normBtn.textContent = "Restore original lengths";
+    } else {
+      if (saved) { a.len = saved.a; b.len = saved.b; }
+      normBtn.textContent = "Normalise to unit length";
+    }
+    normBtn.setAttribute("aria-pressed", String(normalised));
+    normNote.style.display = normalised ? "inline" : "none";
+    update();
+  });
+
+  update();
+})();
+</script>

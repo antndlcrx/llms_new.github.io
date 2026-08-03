@@ -1,0 +1,13 @@
+# Notebook staging
+
+Drafts of module notebooks awaiting publication to their real home,
+`antndlcrx/Intro-to-LLMs-DPIR` under `modules/{track}/` (migration §5).
+Publishing requires a push to that repo — ask before doing it.
+
+Once a notebook is published there, set the module's `notebook` and `colab`
+frontmatter URLs and delete the draft from this directory. This directory is
+never part of the site build.
+
+| Draft | Target | Role |
+|---|---|---|
+| `math/m1_vectors.ipynb` | `modules/math/m1_vectors.ipynb` | explanatory ("Play with this") |

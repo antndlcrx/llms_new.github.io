@@ -3,11 +3,439 @@ track: math
 order: 2
 id: M2
 title: Matrices as Transformations
-description: "A matrix is a function that takes vectors to vectors — and everything else in the track depends on that flip."
-objectives: []
+description: "A matrix is not a table of numbers — it is a function that takes vectors to vectors, and everything else in the track depends on that flip."
+objectives:
+  - Read Ax as applying a function to a vector.
+  - Explain matrix–vector multiplication both row-wise and column-wise, and say when each view helps.
+  - Explain why matrix multiplication is defined the way it is, from composition.
+  - Predict output shapes and debug a shape error.
+  - Describe geometrically what identity, diagonal, and orthogonal matrices do.
 prerequisites: [math/vectors]
-estimatedMinutes: 80
-status: planned
+seeAlso: []
+estimatedMinutes: 90
+status: draft
+widgets:
+  - matrix-transform-canvas
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import MatrixTransformCanvas from '../../../components/widgets/MatrixTransformCanvas.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  axCompute: String.raw`$$A\mathbf{x} \;=\; \begin{bmatrix} 2 & 1 \\ 0 & 3 \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} \;=\; \begin{bmatrix} 2x_1 + x_2 \\ 3x_2 \end{bmatrix}$$`,
+  axComputeCaption: String.raw`The mechanical recipe you may remember: run along each row, multiply matching entries, add. Correct, executable — and, on its own, meaningless. The rest of this section is about what the recipe <em>does</em>.`,
+  colsFact: String.raw`$$A\mathbf{x} \;=\; x_1 \begin{bmatrix} 2 \\ 0 \end{bmatrix} + x_2 \begin{bmatrix} 1 \\ 3 \end{bmatrix} \;=\; x_1\,(A\hat{\mathbf{e}}_1) + x_2\,(A\hat{\mathbf{e}}_2)$$`,
+  colsFactCaption: String.raw`The same computation, regrouped: the output is a linear combination of the matrix's columns — and the columns are exactly where $A$ sends the basis vectors $\hat{\mathbf{e}}_1 = (1,0)$ and $\hat{\mathbf{e}}_2 = (0,1)$. Two arrows determine the entire function.`,
+  matrixDef: String.raw`A rectangular array $A \in \mathbb{R}^{n \times d}$, read as a <strong>linear function</strong> from $\mathbb{R}^d$ to $\mathbb{R}^n$: it maps $\mathbf{x} \mapsto A\mathbf{x}$, and linearity — $A(c\mathbf{u} + \mathbf{v}) = cA\mathbf{u} + A\mathbf{v}$ — means the function is completely determined by where it sends the basis vectors. Those images are its columns.`,
+  rowRead: String.raw`$$\text{row view:}\quad (A\mathbf{x})_i = \mathbf{a}_{i\cdot} \cdot \mathbf{x} \qquad\qquad \text{column view:}\quad A\mathbf{x} = \sum_j x_j\, \mathbf{a}_{\cdot j}$$`,
+  rowReadCaption: String.raw`Row view: each output entry is a dot product of one row with the input — $n$ separate M1-style similarity measurements. Column view: one output vector, mixed from the columns with the input's entries as weights. Same numbers, different mental pictures.`,
+  matProdDef: String.raw`For $B \in \mathbb{R}^{m \times n}$ and $A \in \mathbb{R}^{n \times d}$, the matrix $BA \in \mathbb{R}^{m \times d}$ with entries $(BA)_{ij} = \sum_k B_{ik}A_{kj}$ — defined as exactly the matrix that makes $(BA)\mathbf{x} = B(A\mathbf{x})$ hold for every $\mathbf{x}$. Matrix multiplication <em>is</em> function composition.`,
+  entryRule: String.raw`$$(BA)_{ij} = \sum_{k} B_{ik} A_{kj}$$`,
+  entryRuleCaption: String.raw`The entry rule everyone memorises — row $i$ of $B$ dotted with column $j$ of $A$. It is not a convention: demand that applying $A$ then $B$ equals applying one combined matrix, and this formula is forced on you. The extension problem walks the derivation.`,
+  shapesRule: String.raw`$$(n \times d)\,(d \times k) \;\to\; (n \times k)$$`,
+  shapesRuleCaption: String.raw`The inner dimensions must match, and they annihilate; the outer dimensions survive. Read every matrix expression this way before computing anything — it is a type system, and it catches errors before they happen.`,
+  orthDef: String.raw`A square matrix $Q$ with $Q^\top Q = I$: its columns are unit vectors, mutually orthogonal. Geometrically a rotation or reflection — it moves vectors without changing any length or any angle, so every dot product survives: $(Q\mathbf{a}) \cdot (Q\mathbf{b}) = \mathbf{a} \cdot \mathbf{b}$.`,
+  linearLayer: String.raw`$$\mathbf{h} = W\mathbf{x} + \mathbf{b}$$`,
+  linearLayerCaption: String.raw`A linear layer, the atom of deep learning: a transformation $W$ (rotate, stretch, shear, project — everything this module built) followed by a shift $\mathbf{b}$. A transformer is a few dozen of these, composed, with nonlinearities between.`,
+  detApp: String.raw`The <strong>determinant</strong> is the signed factor by which a matrix scales area (in 2D) or volume (in general): the widget's shaded square has area exactly $\lvert\det A\rvert$, and the sign records whether orientation flipped. $\det A = 0$ means the square was flattened — the map crushed a dimension.`,
+  invApp: String.raw`The <strong>inverse</strong> $A^{-1}$ is the function that undoes $A$, and it exists precisely when $\det A \neq 0$. A <strong>singular</strong> matrix ($\det A = 0$) has no inverse for an honest reason: it collapsed distinct inputs onto the same output, and no function can tell them apart again. Singularity is <em>information destroyed</em>, not a numerical inconvenience.`,
+  rankApp: String.raw`The <strong>rank</strong> of a matrix is the dimension of its image — how many dimensions survive the mapping. The Collapse preset has rank 1: the whole plane lands on a line. Full rank means nothing was lost. M4 makes rank quantitative (how <em>much</em> lands near a lower-dimensional space), which is the doorway to low-rank adaptation.`,
+  basisApp: String.raw`<strong>Change of basis:</strong> the same linear map has different matrices in different coordinate systems — $A' = P^{-1}AP$, where $P$ converts between descriptions. The numbers change; the transformation does not. This is M1's "coordinates are a description" fact, now with machinery: a matrix's entries are basis-dependent bookkeeping for a basis-independent function.`,
+  traceApp: String.raw`The <strong>trace</strong> $\operatorname{tr} A = \sum_i A_{ii}$ is basis-independent despite being computed from basis-dependent entries, and it equals the sum of the eigenvalues M4 introduces. For now, file it as: one of the few single numbers you can read off a matrix that means something about the underlying map.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Let $A = \begin{bmatrix} 2 & 1 \\ 0 & 3 \end{bmatrix}$. Compute $A\hat{\mathbf{e}}_1$ and $A\hat{\mathbf{e}}_2$, and confirm they are the columns of $A$. Then, without any further multiplication, write down what $A$ does to $\mathbf{x} = (2, 1)$ using the column view.</p>`,
+    solution: String.raw`<p>$A\hat{\mathbf{e}}_1 = (2, 0)$ — the first column; $A\hat{\mathbf{e}}_2 = (1, 3)$ — the second. By linearity, $A\mathbf{x} = 2\,(2,0) + 1\,(1,3) = (5, 3)$: two basis images, scaled and added. The matrix never needed to be "applied" row by row — knowing where the basis goes is knowing everything.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Shape drill. $P$ is $3 \times 4$, $Q$ is $4 \times 4$, $R$ is $4 \times 2$, and $\mathbf{v}$ is a length-4 column vector. For each expression, give the output shape or name the mismatch: (a)&nbsp;$PQ$ (b)&nbsp;$QP$ (c)&nbsp;$PR$ (d)&nbsp;$RP$ (e)&nbsp;$Q\mathbf{v}$ (f)&nbsp;$P\mathbf{v}$ (g)&nbsp;$P^\top P$ (h)&nbsp;$PP^\top$.</p>`,
+    solution: String.raw`<p>(a)&nbsp;$(3{\times}4)(4{\times}4) \to 3 \times 4$. (b)&nbsp;$(4{\times}4)(3{\times}4)$: mismatch — inner $4$ and $3$ disagree. (c)&nbsp;$(3{\times}4)(4{\times}2) \to 3 \times 2$. (d)&nbsp;$(4{\times}2)(3{\times}4)$: mismatch ($2 \neq 3$). (e)&nbsp;$(4{\times}4)(4{\times}1) \to$ a length-4 vector. (f)&nbsp;$(3{\times}4)(4{\times}1) \to$ a length-3 vector. (g)&nbsp;$(4{\times}3)(3{\times}4) \to 4 \times 4$. (h)&nbsp;$(3{\times}4)(4{\times}3) \to 3 \times 3$. Note (g) and (h): both valid, different shapes — transposing to "make the shapes work" without knowing which product you <em>meant</em> is the classic silent bug.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Let $R = \begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$ (rotation by $90°$) and $D = \begin{bmatrix} 2 & 0 \\ 0 & 1 \end{bmatrix}$ (stretch the first axis). Compute $RD$ and $DR$. They differ — explain geometrically why they must.</p>`,
+    solution: String.raw`<p>$RD = \begin{bmatrix} 0 & -1 \\ 2 & 0 \end{bmatrix}$ (stretch first, then rotate); $DR = \begin{bmatrix} 0 & -2 \\ 1 & 0 \end{bmatrix}$ (rotate first, then stretch). Geometrically: $D$ always stretches <em>horizontally</em>. Stretch-then-rotate carries the widened shape into a vertical orientation; rotate-then-stretch widens whatever is horizontal <em>after</em> the turn — a different part of the shape. Order matters because the second operation acts on the first one's output, not on the original. Matrix multiplication is composition, and composition of actions has never been commutative.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Let $E$ be a $5 \times 3$ matrix and $\mathbf{x} = (0, 0, 1, 0, 0)$ a one-hot row vector. Show that $\mathbf{x}E$ is exactly the third row of $E$. If lookup by index gives the same answer, why do embedding layers implement it as a matrix multiply anyway?</p>`,
+    solution: String.raw`<p>$\mathbf{x}E = \sum_i x_i\, \mathbf{e}_{i\cdot} = 0 + 0 + 1\cdot\mathbf{e}_{3\cdot} + 0 + 0$ — the mixture view: entries of $\mathbf{x}$ weight the rows, and a one-hot weight vector selects exactly one. It is implemented as a multiply because the multiply is <em>differentiable</em> — gradients flow through it to update the embedding — and because it generalises: replace the one-hot with a soft distribution and the same operation returns a weighted mixture of embeddings, which is precisely what attention's output step computes.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Show that an orthogonal matrix preserves dot products: $(Q\mathbf{a}) \cdot (Q\mathbf{b}) = \mathbf{a} \cdot \mathbf{b}$. Then say why this matters for a transformer that encodes token positions by <em>rotating</em> query and key vectors (rotary position embeddings, met properly in the LLMs track).</p>`,
+    solution: String.raw`<p>$(Q\mathbf{a}) \cdot (Q\mathbf{b}) = (Q\mathbf{a})^\top (Q\mathbf{b}) = \mathbf{a}^\top Q^\top Q\, \mathbf{b} = \mathbf{a}^\top I \mathbf{b} = \mathbf{a} \cdot \mathbf{b}$. Consequence: rotation changes no similarity on its own — attention scores are dot products (M1), and rotations conserve them. Rotary embeddings exploit this: rotate each vector by an angle proportional to its <em>position</em>, and the score between two tokens ends up depending only on their positional <em>difference</em> — relative position, encoded for free by geometry.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Prove that composition forces the definition of matrix multiplication. Assume only: (1) $A$ and $B$ are linear maps, and (2) you want a single matrix $C = BA$ with $C\mathbf{x} = B(A\mathbf{x})$ for every $\mathbf{x}$. Derive $C_{ij} = \sum_k B_{ik}A_{kj}$.</p>`,
+    solution: String.raw`<p>A matrix is determined by its columns — its images of the basis (§1). So compute $C\hat{\mathbf{e}}_j$: it must equal $B(A\hat{\mathbf{e}}_j)$, and $A\hat{\mathbf{e}}_j$ is the $j$-th column of $A$, with entries $A_{kj}$. Applying $B$ to it, the column view gives $B(A\hat{\mathbf{e}}_j) = \sum_k A_{kj}\, \mathbf{b}_{\cdot k}$ — a weighted mix of $B$'s columns. Its $i$-th entry is $\sum_k A_{kj} B_{ik}$. But $C\hat{\mathbf{e}}_j$ is the $j$-th column of $C$, whose $i$-th entry is $C_{ij}$. Equate: $C_{ij} = \sum_k B_{ik} A_{kj}$. No choices were available anywhere — the "rule to memorise" is the only rule there could be.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    M1 gave you points and arrows; this module gives you the machines that move them. Every
+    layer of a neural network, every attention head, every embedding lookup is a matrix acting
+    on vectors — and if a matrix is just a grid of numbers to you, then a transformer is just
+    a very large pile of arithmetic. The flip this module installs: <em>a matrix is a
+    function.</em> Feed it a vector, get a vector back. Once that lands, matrix multiplication
+    stops being a rule you memorised and becomes the one operation deep learning is made of.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Read <em>Ax</em> as applying a function to a vector.</li>
+      <li>Explain matrix–vector multiplication both row-wise and column-wise, and say when each view helps.</li>
+      <li>Explain why matrix multiplication is defined the way it is, from composition.</li>
+      <li>Predict output shapes and debug a shape error.</li>
+      <li>Describe geometrically what identity, diagonal, and orthogonal matrices do.</li>
+    </ol>
+  </div>
+</section>
+
+## A Matrix Eats a Vector
+
+Start with what you already know. A matrix is, before anything else, a rectangular grid of
+numbers — and you have met thousands: a spreadsheet of survey responses, rows for respondents
+and columns for questions, is a matrix. So far, a matrix is a <em>noun</em>: a container that
+holds data. This module is about its other life, as a <em>verb</em>.
+
+Here is the mechanical recipe, the one taught in school. To multiply a matrix by a vector,
+run along each row, multiply matching entries, and add:
+
+<div class="formula-block">
+  <Tex tex={math.axCompute} />
+  <Tex class="formula-block__caption" tex={math.axComputeCaption} />
+</div>
+
+Now the flip. Take the same computation and regroup it — collect the terms by <em>column</em>
+instead of by row:
+
+<div class="formula-block">
+  <Tex tex={math.colsFact} />
+  <Tex class="formula-block__caption" tex={math.colsFactCaption} />
+</div>
+
+Read what that says. The matrix spends the input's first coordinate on its first column and
+the second coordinate on its second column. And those columns are precisely
+<strong>where the matrix sends the basis vectors</strong> — feed in ê₁ = (1, 0) and the
+recipe hands back the first column, untouched. This is the single most clarifying fact in
+linear algebra, and the one most often skipped: <em>to know a matrix, look at where it sends
+the basis.</em> Two arrows determine everything else, because linearity fills in all the
+space between them. Try it — drag the arrows:
+
+<MatrixTransformCanvas />
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Matrix (as a Linear Map)</p>
+  <Tex tex={math.matrixDef} />
+</div>
+
+One more thing the widget shows, which will matter enormously later. Press
+<strong>Collapse</strong>: the two columns fall onto the same line, the square flattens to a
+segment, and the determinant reads zero. The matrix has crushed a two-dimensional plane onto
+a one-dimensional line — distinct inputs now share outputs, and nothing can pull them apart
+again. You have just <em>seen</em> rank deficiency, two modules before it gets a name.
+
+<details class="appendix-box">
+  <summary>Appendix · determinant, inverse, rank</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.detApp} />
+    <Tex tex={math.invApp} />
+    <Tex tex={math.rankApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A matrix is a function that takes vectors to vectors, and its columns are the images of
+    the basis vectors — two arrows that determine the whole map. When the columns fall onto
+    one line, the map destroys a dimension, and the determinant announces it by hitting zero.
+  </p>
+</div>
+
+## Two Ways to Read Ax
+
+The row-wise recipe and the column-wise regrouping are not just two ways to compute — they
+are two ways to <em>think</em>, and downstream mechanisms need both fluently.
+
+<div class="formula-block">
+  <Tex tex={math.rowRead} />
+  <Tex class="formula-block__caption" tex={math.rowReadCaption} />
+</div>
+
+<strong>The row view</strong> says: each output entry is a dot product — an M1-style
+similarity measurement — between one row and the input. When a transformer scores one query
+against every key at once, that is a matrix–vector product read row-wise: each row of the
+key matrix interrogates the same query.
+
+<strong>The column view</strong> says: the output is a mixture of the columns, weighted by
+the input's entries. When the input is one-hot — a single 1, everything else 0 — the
+"mixture" selects exactly one column. That is an embedding lookup: a word's index, encoded as
+a one-hot vector, multiplied into an embedding matrix, returns that word's vector. Lookup and
+matrix multiply are the same operation — which is not a curiosity; it is why the lookup is
+differentiable and why embeddings can be <em>learned</em>.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    A matrix has first column (0, 1) and second column (&minus;1, 0). Using only the
+    columns-are-basis-images fact — no arithmetic — say what this matrix does to the plane.
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        It sends ê₁ (pointing right) to (0, 1) — pointing up — and ê₂ (pointing up) to
+        (&minus;1, 0) — pointing left. Right goes to up, up goes to left: the whole plane
+        rotates a quarter turn anticlockwise. You just read a rotation off four numbers by
+        asking where two arrows land — the skill this module exists to install. Reproduce it
+        in the widget and watch the square turn without distorting.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Row view: every output entry is a similarity measurement — the attention-scores picture.
+    Column view: the output is a weighted mixture of columns — the embedding-lookup picture.
+    Same arithmetic, different insights; keep both fluent.
+  </p>
+</div>
+
+## Composition, and Why Matmul Looks the Way It Does
+
+Functions compose: do one, then another. Apply <em>A</em> to a vector, then apply <em>B</em>
+to the result. The natural question — is there a single matrix that does both in one step? —
+has a yes, and demanding it <em>forces</em> the definition of matrix multiplication:
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Matrix Product</p>
+  <Tex tex={math.matProdDef} />
+</div>
+
+<div class="formula-block">
+  <Tex tex={math.entryRule} />
+  <Tex class="formula-block__caption" tex={math.entryRuleCaption} />
+</div>
+
+Two consequences worth internalising. First, <strong>order matters</strong> — and once you
+think in transformations, this is obvious rather than mysterious. Stretch-then-rotate and
+rotate-then-stretch land shapes in visibly different places (the problem set has you compute
+one such pair; replay it in the widget with the Scale and Rotate presets). "Matrix
+multiplication is not commutative" stops being an algebra fact to memorise and becomes a
+statement about the world: doing things in a different order does different things.
+
+Second, this is <strong>what a deep network is</strong>. Layer after layer applies a
+transformation to the previous layer's output — composition, dozens deep. The reason "it's
+matrix multiplication all the way down" is a meaningful sentence about transformers is that
+matrix multiplication <em>is</em> composition of functions, and composition is how simple
+functions become expressive ones.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Matrix multiplication is function composition — the entry rule is forced by requiring
+    (BA)x&nbsp;=&nbsp;B(Ax), not chosen by convention. Non-commutativity is the everyday fact
+    that action order matters, and a deep network is a long composition.
+  </p>
+</div>
+
+## Shapes as a Type System
+
+The most practically useful section in this module, and a skill rather than a fact. Every
+matrix expression has a shape signature:
+
+<div class="formula-block">
+  <Tex tex={math.shapesRule} />
+  <Tex class="formula-block__caption" tex={math.shapesRuleCaption} />
+</div>
+
+Treat shapes the way a programmer treats types. Before evaluating any product, read the
+signature: do the inner dimensions match? What survives? An expression that type-checks may
+still be the <em>wrong</em> computation — but an expression that fails the check is certainly
+broken, and the check costs seconds. Shape errors are the single most common failure in this
+curriculum's practical notebooks, and nearly all of them are caught by this discipline
+applied before running anything.
+
+Two habits complete the skill. First, real data adds a <strong>batch dimension</strong>:
+frameworks process many inputs at once, so a batch of 32 vectors of dimension 768 is a
+32 × 768 matrix, and the convention is that batch comes first. When you meet a
+three-dimensional array — batch × sequence-length × dimension, the standard shape of a
+transformer's hidden states — the same annihilation rule applies to the trailing two
+dimensions while batch rides along. Second, <strong>read shape errors as information</strong>,
+not as failure: the message names two shapes, and the mismatched inner pair tells you which
+object is oriented wrongly or which dimension you forgot — usually pinpointing the bug to a
+single missing transpose. The companion notebook drills exactly this, on deliberately broken
+code.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    A notebook throws: <em>"matmul: shapes (32, 768) and (32, 768) not aligned: 768 (dim 1)
+    &ne; 32 (dim 0)."</em> The programmer intended to compare every vector in the batch with
+    every other. What did they forget, and what is the corrected expression's output shape?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        They multiplied the batch by itself: (32 × 768)(32 × 768) — inner dimensions 768 and
+        32 disagree. Comparing all pairs needs the second operand transposed:
+        (32 × 768)(768 × 32) → 32 × 32, a matrix of all pairwise dot products — every vector
+        against every other, which is also exactly the shape of an attention-score matrix.
+        The error message contained the entire diagnosis: the mismatched pair names the
+        dimension that needed flipping.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Shapes are a type system: inner dimensions must match and annihilate, outer dimensions
+    survive, batch rides in front. Check the signature before computing, and read shape
+    errors as diagnosis — they name the exact dimension you got wrong.
+  </p>
+</div>
+
+## A Bestiary of Special Matrices
+
+A few families of matrices come up so often that recognising them by <em>behaviour</em> —
+not by the pattern of their entries — is a working skill. Each is introduced here by what it
+does; reproduce each one in the widget above as you read.
+
+<strong>The identity</strong> does nothing: every basis vector goes to itself, so every
+column is a basis vector. It is the "multiply by 1" of the matrix world, and the benchmark
+every other matrix is compared against.
+
+<strong>Diagonal matrices</strong> scale each axis independently — the Scale preset: ê₁
+stretched, ê₂ squashed, no mixing between axes. Cheap to apply, trivial to reason about,
+and the shape every matrix "wants" to be — M4's whole story is that an arbitrary matrix is
+rotations wrapped around a diagonal core.
+
+<strong>Orthogonal matrices</strong> rotate or reflect:
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Orthogonal Matrix</p>
+  <Tex tex={math.orthDef} />
+</div>
+
+The Rotate preset is one kind; the Reflect preset is the other (its determinant is
+&minus;1 — area preserved, orientation flipped). Orthogonal maps are the <em>safe</em>
+transformations: they move information around without amplifying, shrinking, or destroying
+any of it, which is why they appear wherever a computation must not distort similarity —
+problem 5 connects this to how modern transformers encode word positions.
+
+<strong>Symmetric matrices</strong> (equal to their own transpose) get one sentence now and a
+module later: they are exactly the matrices whose action is a pure scale along some rotated
+set of axes, and M4 is the payoff of that fact.
+
+<details class="appendix-box">
+  <summary>Appendix · change of basis, and the trace</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.basisApp} />
+    <Tex tex={math.traceApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Know the bestiary by behaviour: identity does nothing, diagonal scales axes independently,
+    orthogonal rotates or reflects while preserving every length and angle, and symmetric is
+    a scale-along-rotated-axes in disguise. Recognising them buys instant geometric reading
+    of otherwise opaque expressions.
+  </p>
+</div>
+
+## Where This Lands: The Linear Layer
+
+Assemble the module, and you can now read the atom of deep learning:
+
+<div class="formula-block">
+  <Tex tex={math.linearLayer} />
+  <Tex class="formula-block__caption" tex={math.linearLayerCaption} />
+</div>
+
+Read it with this module's eyes. <em>W</em> is a transformation — it rotates, stretches,
+shears, and projects its input; its row view says each output entry measures the input
+against a learned pattern, and its column view says the output mixes learned directions.
+The bias <strong>b</strong> is a shift — the one move a linear map cannot make is moving the
+origin, and <strong>b</strong> restores that freedom. An embedding layer is the column view
+with one-hot inputs. An attention-score computation is the row view at scale. A transformer
+stacks a few dozen of these, composed in the precise sense of this module's third section —
+with nonlinearities between layers, because a composition of purely linear maps collapses
+back into one linear map, a fact the deep-learning track opens by demonstrating.
+
+And the planted debt: this module kept saying "M4 pays this off" — the Collapse preset, the
+diagonal core, the symmetric preview. That module takes matrices <em>apart</em>, and it is
+where low-rank adaptation — the fine-tuning method the LLMs track teaches — becomes
+inevitable rather than clever.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A linear layer is a learned transformation plus a shift; an embedding lookup is the
+    column view with a one-hot input; attention scores are the row view at scale. A
+    transformer is a long composition of exactly the objects this module taught you to read.
+  </p>
+</div>
+
+## Problem Set
+
+The module's real assessment: six problems, easy to hard, on paper first. The shape drill in
+problem 2 is the skill you will use most often — do not skip it.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    A matrix is a function that takes vectors to vectors, and its columns are the images of
+    the basis vectors — a handful of arrows that determine the entire map, because linearity
+    fills in everything between them. Matrix–vector multiplication reads two ways: rows as
+    similarity measurements (the attention picture) and columns as weighted mixtures (the
+    embedding-lookup picture). Matrix multiplication is function composition — its entry rule
+    forced rather than chosen, its non-commutativity the everyday fact that action order
+    matters. Shapes form a type system: inner dimensions annihilate, outer survive, batch in
+    front, and a shape error names the exact dimension you got wrong. The special matrices
+    are known by behaviour — identity, diagonal scaling, orthogonal rotation preserving every
+    dot product, symmetric as M4's opening act. And the linear layer <em>Wx + b</em> — a
+    transformation plus a shift — is the atom out of which every network in this curriculum
+    is composed. The planted debt: what the Collapse preset showed, a matrix crushing
+    dimensions, becomes quantitative in M4, where low rank turns from a failure mode into the
+    most useful fact about large matrices.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://www.3blue1brown.com/topics/linear-algebra" target="_blank" rel="noopener">3Blue1Brown, <em>Essence of Linear Algebra</em></a>: chapters 3–4 animate exactly this module — linear transformations and composition.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em></a>: sections 2.2–2.7 for the same material at textbook depth, free online.</li>
+    <li><a href="https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/" target="_blank" rel="noopener">Strang, MIT 18.06, lectures 1–3</a>: the classic course; Strang's column-view evangelism is this module's second section, preached for forty years.</li>
+  </ul>
+</section>

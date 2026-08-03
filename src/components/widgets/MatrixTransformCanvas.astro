@@ -1,0 +1,238 @@
+---
+/**
+ * matrix-transform-canvas (M2) — an editable 2×2 matrix as a live function:
+ * a grid and the unit square deform under it, the two columns are drawn as
+ * draggable arrows (dragging them edits the matrix — the fastest route to
+ * "columns are the images of the basis vectors"), and the determinant reads
+ * out as the signed area of the transformed square. Presets include a
+ * singular matrix that collapses the plane to a line: rank deficiency,
+ * seen before it is defined. Hand-rolled canvas, no libraries.
+ * All ids are mtc-prefixed (never a heading slug — see ProblemSet lesson).
+ */
+---
+
+<div class="widget-wrap" id="matrix-transform-canvas">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">The Matrix as a Function</p>
+  <p class="widget-intro">
+    Edit the matrix — or drag the two column arrows directly — and watch the plane obey.
+    The shaded square is the unit square; its signed area is the determinant. Then press
+    <strong>Collapse</strong> and watch the whole plane fold onto a line.
+  </p>
+
+  <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
+    <div style="display:grid; grid-template-columns:auto auto auto auto; align-items:center; gap:4px 6px; font-family:var(--font-mono); font-size:13px; color:var(--text-sec, #3D4455);">
+      <span style="font-size:22px; font-weight:300;">[</span>
+      <input type="number" id="mtc-a" value="1" step="0.1" aria-label="Matrix entry row 1 column 1" style="width:58px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:12px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);">
+      <input type="number" id="mtc-b" value="0" step="0.1" aria-label="Matrix entry row 1 column 2" style="width:58px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:12px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);">
+      <span style="font-size:22px; font-weight:300;">]</span>
+      <span></span>
+      <input type="number" id="mtc-c" value="0" step="0.1" aria-label="Matrix entry row 2 column 1" style="width:58px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:12px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);">
+      <input type="number" id="mtc-d" value="1" step="0.1" aria-label="Matrix entry row 2 column 2" style="width:58px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; font-family:var(--font-mono); font-size:12px; text-align:center; background:var(--card,#fff); color:var(--text,#0F1117);">
+      <span></span>
+    </div>
+    <div style="display:flex; gap:6px; flex-wrap:wrap;" role="group" aria-label="Presets">
+      <button class="mtc-preset" data-m="1,0,0,1">Identity</button>
+      <button class="mtc-preset" data-m="1.6,0,0,0.6">Scale</button>
+      <button class="mtc-preset" data-m="0.87,-0.5,0.5,0.87">Rotate 30°</button>
+      <button class="mtc-preset" data-m="1,0.8,0,1">Shear</button>
+      <button class="mtc-preset" data-m="-1,0,0,1">Reflect</button>
+      <button class="mtc-preset" data-m="1,0.5,2,1">Collapse</button>
+    </div>
+  </div>
+
+  <div class="visual-diagram" style="margin: 0 0 4px;">
+    <canvas id="mtc-canvas" width="480" height="400" style="width:100%; max-width:480px; display:block; margin:0 auto; touch-action:none;" tabindex="0" aria-label="Plane transformed by the matrix. Drag the two column arrows to edit the matrix."></canvas>
+  </div>
+
+  <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family:var(--font-mono); padding:6px 0 2px;">
+    <span style="font-size:14px; font-weight:700; color:var(--text, #0F1117);">det&nbsp;A&nbsp;=&nbsp;<span id="mtc-det">1.00</span></span>
+    <span id="mtc-verdict" style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted, #6B7280);">signed area of the square</span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">
+    The darker arrow is the first column — where the matrix sends <strong>ê₁</strong>; the lighter
+    arrow is the second — where it sends <strong>ê₂</strong>. That is all a matrix is: two answers
+    to "where do the basis vectors go?", and every other point follows by linearity. Drag one
+    column onto the other's line and the determinant hits zero as the square flattens.
+  </p>
+</div>
+
+<style is:global>
+  .mtc-preset {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-sec, #3D4455);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .mtc-preset:hover { border-color: var(--accent, #2D8ABF); color: var(--accent, #2D8ABF); }
+</style>
+
+<script is:inline>
+(function() {
+  var canvas = document.getElementById("mtc-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var inputs = ["a", "b", "c", "d"].map(function(k) { return document.getElementById("mtc-" + k); });
+  var outDet = document.getElementById("mtc-det");
+  var verdict = document.getElementById("mtc-verdict");
+  var presets = Array.prototype.slice.call(document.querySelectorAll("#matrix-transform-canvas .mtc-preset"));
+
+  var W = 480, H = 400, CX = 240, CY = 200, S = 60;
+  var M = { a: 1, b: 0, c: 0, d: 1 }; // columns: (a,c) and (b,d)
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  function px(x, y) { return { x: CX + S * x, y: CY - S * y }; }
+  function apply(x, y) { return { x: M.a * x + M.b * y, y: M.c * x + M.d * y }; }
+
+  function line(p, q, color, width) {
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+  }
+
+  function arrow(from, to, color) {
+    line(from, to, color, 2.5);
+    ctx.fillStyle = color;
+    var ang = Math.atan2(to.y - from.y, to.x - from.x);
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(to.x - 9 * Math.cos(ang - 0.42), to.y - 9 * Math.sin(ang - 0.42));
+    ctx.lineTo(to.x - 9 * Math.cos(ang + 0.42), to.y - 9 * Math.sin(ang + 0.42));
+    ctx.closePath(); ctx.fill();
+  }
+
+  function draw() {
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var borderLt = cssVar("--border-lt", "#EAEEF4");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "11px " + cssVar("--font-body", "Inter, system-ui, sans-serif");
+
+    // Original grid, faint — the "before" picture.
+    for (var g = -4; g <= 4; g++) {
+      line(px(g, -4), px(g, 4), borderLt, 1);
+      line(px(-4, g), px(4, g), borderLt, 1);
+    }
+
+    // Transformed grid — straight lines stay straight under a linear map.
+    ctx.globalAlpha = 0.5;
+    for (var t = -4; t <= 4; t++) {
+      var a1 = apply(t, -4), b1 = apply(t, 4);
+      line(px(a1.x, a1.y), px(b1.x, b1.y), accent, 1);
+      var a2 = apply(-4, t), b2 = apply(4, t);
+      line(px(a2.x, a2.y), px(b2.x, b2.y), accent, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    // Axes on top of grids.
+    line(px(-4, 0), px(4, 0), border, 1.4);
+    line(px(0, -4), px(0, 4), border, 1.4);
+
+    // Transformed unit square, filled; sign of det = orientation.
+    var corners = [apply(0, 0), apply(1, 0), apply(1, 1), apply(0, 1)];
+    ctx.beginPath();
+    corners.forEach(function(c, i) {
+      var p = px(c.x, c.y);
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = accent; ctx.globalAlpha = 0.16; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Column arrows + handles: col1 darker (image of e1), col2 lighter (image of e2).
+    var c1 = px(M.a, M.c), c2 = px(M.b, M.d), o = px(0, 0);
+    arrow(o, c1, accentDark);
+    arrow(o, c2, accent);
+    [ [c1, accentDark], [c2, accent] ].forEach(function(pair) {
+      ctx.fillStyle = pair[1]; ctx.globalAlpha = 0.3;
+      ctx.beginPath(); ctx.arc(pair[0].x, pair[0].y, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+    ctx.fillStyle = accentDark; ctx.textAlign = "left";
+    ctx.fillText("Aê₁", c1.x + 10, c1.y - 6);
+    ctx.fillStyle = accent;
+    ctx.fillText("Aê₂", c2.x + 10, c2.y - 6);
+  }
+
+  function det() { return M.a * M.d - M.b * M.c; }
+
+  function update() {
+    inputs[0].value = M.a.toFixed(1); inputs[1].value = M.b.toFixed(1);
+    inputs[2].value = M.c.toFixed(1); inputs[3].value = M.d.toFixed(1);
+    var d = det();
+    outDet.textContent = d.toFixed(2);
+    if (Math.abs(d) < 0.05) verdict.textContent = "≈ 0 — the plane has collapsed to a line";
+    else if (d < 0) verdict.textContent = "signed area · orientation flipped";
+    else verdict.textContent = "signed area of the square";
+    draw();
+  }
+
+  function readInputs() {
+    var vals = inputs.map(function(el) { return parseFloat(el.value); });
+    if (vals.some(isNaN)) return;
+    M = { a: vals[0], b: vals[1], c: vals[2], d: vals[3] };
+    var d = det();
+    outDet.textContent = d.toFixed(2);
+    if (Math.abs(d) < 0.05) verdict.textContent = "≈ 0 — the plane has collapsed to a line";
+    else if (d < 0) verdict.textContent = "signed area · orientation flipped";
+    else verdict.textContent = "signed area of the square";
+    draw();
+  }
+  inputs.forEach(function(el) { el.addEventListener("input", readInputs); });
+
+  presets.forEach(function(b) {
+    b.addEventListener("click", function() {
+      var v = b.getAttribute("data-m").split(",").map(parseFloat);
+      M = { a: v[0], b: v[1], c: v[2], d: v[3] };
+      update();
+    });
+  });
+
+  // Drag a column arrow to edit the matrix directly.
+  var dragging = null; // 1 or 2
+  function unitCoords(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = (clientX - rect.left) * (W / rect.width);
+    var my = (clientY - rect.top) * (H / rect.height);
+    return { x: (mx - CX) / S, y: (CY - my) / S };
+  }
+  function nearCol(u) {
+    var d1 = Math.hypot(u.x - M.a, u.y - M.c);
+    var d2 = Math.hypot(u.x - M.b, u.y - M.d);
+    if (Math.min(d1, d2) > 0.35) return null;
+    return d1 <= d2 ? 1 : 2;
+  }
+  function startDrag(clientX, clientY, e) {
+    var col = nearCol(unitCoords(clientX, clientY));
+    if (col) { dragging = col; e.preventDefault(); }
+  }
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    var u = unitCoords(clientX, clientY);
+    var clamp = function(v) { return Math.max(-3.5, Math.min(3.5, Math.round(v * 10) / 10)); };
+    if (dragging === 1) { M.a = clamp(u.x); M.c = clamp(u.y); }
+    else { M.b = clamp(u.x); M.d = clamp(u.y); }
+    update();
+  }
+  canvas.addEventListener("mousedown", function(e) { startDrag(e.clientX, e.clientY, e); });
+  document.addEventListener("mousemove", function(e) { if (dragging) moveDrag(e.clientX, e.clientY); });
+  document.addEventListener("mouseup", function() { dragging = null; });
+  canvas.addEventListener("touchstart", function(e) { startDrag(e.touches[0].clientX, e.touches[0].clientY, e); }, { passive: false });
+  canvas.addEventListener("touchmove", function(e) { if (dragging) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = null; });
+
+  update();
+})();
+</script>

@@ -1,0 +1,13 @@
+---
+/**
+ * KaTeX injection point for MDX module bodies. LaTeX lives in an exported
+ * `math` object built with String.raw (02-conventions §6); MDX cannot use
+ * set:html directly, so this component carries the pattern over.
+ */
+interface Props {
+  tex: string;
+  class?: string;
+}
+const { tex, class: className } = Astro.props;
+---
+<p class={className} set:html={tex} />

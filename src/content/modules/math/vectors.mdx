@@ -1,0 +1,459 @@
+---
+track: math
+order: 1
+id: M1
+title: Vectors as Meaning
+description: What a vector is, what the dot product measures, and why machines compare texts by angle rather than by distance.
+objectives:
+  - Describe a vector geometrically and algebraically, and move between the two descriptions.
+  - Compute and interpret a norm, and say exactly what normalisation discards.
+  - Give all three readings of the dot product and say when each is the useful one.
+  - Explain why cosine similarity is used for text rather than Euclidean distance.
+  - State what an attention score is measuring.
+prerequisites: []
+seeAlso: []
+estimatedMinutes: 70
+status: draft
+widgets:
+  - vector-playground
+layer: spine
+---
+
+import Tex from '../../../components/Tex.astro';
+
+export const math = {
+  normDef: String.raw`$$\lVert \mathbf{a} \rVert = \sqrt{a_1^2 + a_2^2 + \cdots + a_d^2}$$`,
+  normCaption: String.raw`The Euclidean norm of a $d$-dimensional vector: square every coordinate, add them up, take the root. In two dimensions this is the Pythagorean theorem; in $d$ dimensions it is the Pythagorean theorem applied $d-1$ times.`,
+  unitDef: String.raw`The vector $\hat{\mathbf{a}} = \mathbf{a} \,/\, \lVert \mathbf{a} \rVert$ obtained by dividing a vector by its own length. Unit vectors all have norm 1: they carry a <em>direction</em> and nothing else.`,
+  dotAlg: String.raw`$$\mathbf{a} \cdot \mathbf{b} = \sum_{i=1}^{d} a_i b_i = a_1 b_1 + a_2 b_2 + \cdots + a_d b_d$$`,
+  dotAlgCaption: String.raw`The algebraic reading: multiply matching coordinates, add everything up. Cheap to compute and utterly unilluminating on its own.`,
+  dotGeo: String.raw`$$\mathbf{a} \cdot \mathbf{b} = \lVert \mathbf{a} \rVert \, \lVert \mathbf{b} \rVert \cos\theta$$`,
+  dotGeoCaption: String.raw`The geometric reading: the product of the two lengths, discounted by the angle $\theta$ between them. Aligned vectors get the full product; perpendicular vectors get zero; opposed vectors go negative.`,
+  dotDef: String.raw`For vectors $\mathbf{a}, \mathbf{b} \in \mathbb{R}^d$, the scalar $\mathbf{a} \cdot \mathbf{b} = \sum_i a_i b_i$, equivalently $\lVert \mathbf{a} \rVert \lVert \mathbf{b} \rVert \cos\theta$. A single number measuring how much the two vectors <em>agree</em> — in both direction and magnitude.`,
+  cosine: String.raw`$$\text{cosine sim}(\mathbf{a}, \mathbf{b}) = \frac{\mathbf{a} \cdot \mathbf{b}}{\lVert \mathbf{a} \rVert \, \lVert \mathbf{b} \rVert} = \cos\theta$$`,
+  cosineCaption: String.raw`Divide the dot product by both lengths and only the angle survives: <strong>1</strong> means same direction, <strong>0</strong> means orthogonal, <strong>&minus;1</strong> means opposite.`,
+  cosineDef: String.raw`The cosine of the angle between two vectors: their dot product divided by the product of their norms. A similarity measure that depends on <em>direction only</em> — multiplying either vector by a positive constant changes nothing.`,
+  attnScore: String.raw`$$\text{score}(\mathbf{q}, \mathbf{k}) = \frac{\mathbf{q} \cdot \mathbf{k}}{\sqrt{d_k}}$$`,
+  attnCaption: String.raw`An attention score is a dot product between a query vector $\mathbf{q}$ and a key vector $\mathbf{k}$, divided by $\sqrt{d_k}$. Why that particular denominator is the right one is deliberately left open here — M7 answers it once variance is available.`,
+  axiomsA: String.raw`A <strong>vector space</strong> over the real numbers is a set $V$ with two operations — addition of vectors, and multiplication of a vector by a scalar — satisfying eight axioms: addition is associative and commutative, there is a zero vector, every vector has an additive inverse, scalar multiplication is associative and distributes over both vector addition and scalar addition, and multiplying by 1 changes nothing. Everything in this module used only these rules.`,
+  axiomsB: String.raw`The point of the abstraction is that $\mathbb{R}^d$ is not the only thing satisfying it. Polynomials form a vector space. Functions form a vector space. Random variables with finite variance form a vector space — which is why "covariance behaves like a dot product" is a theorem rather than an analogy, and why intuitions built here transfer to places that look nothing like arrows.`,
+  spanBasis: String.raw`A set of vectors <strong>spans</strong> a space if every vector in it can be written as a weighted sum of them. A set is <strong>linearly independent</strong> if none of its members is a weighted sum of the others. A <strong>basis</strong> is both at once — a minimal spanning set — and the number of vectors in any basis is the same, which is what <strong>dimension</strong> means. When we say an embedding space "is 768-dimensional," this is the definition doing the work: 768 independent directions suffice to describe every vector, and no fewer do.`,
+  otherNorms: String.raw`The Euclidean norm is the $\ell_2$ member of a family. The $\ell_1$ norm $\sum_i \lvert a_i \rvert$ adds absolute coordinates — it appears wherever sparsity matters, including lasso regression. The $\ell_\infty$ norm $\max_i \lvert a_i \rvert$ takes the single largest coordinate. All norms agree on what "small" means up to a constant, but they disagree about <em>shape</em>: the set of unit vectors is a sphere under $\ell_2$, a diamond under $\ell_1$, a cube under $\ell_\infty$. Regularisation chapters make heavy use of the difference.`,
+  probThree: String.raw`Document A has count vector $(2, 1, 4)$; document B, three times longer, has $(6, 3, 12)$. Compute the Euclidean distance between them and the cosine similarity of them. State which number answers "are these documents about the same thing?" and why.`,
+  probThreeSol: String.raw`$\mathbf{b} = 3\mathbf{a}$, so the distance is $\lVert \mathbf{b} - \mathbf{a} \rVert = 2\lVert \mathbf{a} \rVert = 2\sqrt{4+1+16} \approx 9.17$ — large. But the angle between $\mathbf{a}$ and $3\mathbf{a}$ is zero, so cosine similarity is exactly $1$. Euclidean distance is measuring document <em>length</em>, a nuisance; cosine is measuring topical <em>direction</em>, the thing asked about.`,
+  probFourSol: String.raw`For unit vectors $\lVert \mathbf{a} \rVert = \lVert \mathbf{b} \rVert = 1$, so $\mathbf{a} \cdot \mathbf{b} = \lVert \mathbf{a} \rVert \lVert \mathbf{b} \rVert \cos\theta = \cos\theta$. One line — the whole point is that you can now <em>see</em> it: normalisation deletes the magnitude terms and leaves the angle.`,
+  probSixSol: String.raw`In high dimensions, a random unit vector's coordinates are each tiny (on the order of $1/\sqrt d$), and the dot product $\sum_i a_i b_i$ is a sum of $d$ products of independent small terms of unpredictable sign — positive and negative contributions cancel, and the sum concentrates near $0$ with spread shrinking like $1/\sqrt d$. Consequence: in a 768-dimensional embedding space, <em>almost everything is almost orthogonal to almost everything else</em>. Similarity search still works because embeddings are not random — training packs related meanings into a thin, structured region. The surprising roominess of high-dimensional space returns in M4 (why low rank captures so much) and M7 (why variances add).`,
+};
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    Every method in this curriculum begins with the same move: text becomes points in a space,
+    and questions about meaning become questions about geometry. Embeddings, attention,
+    fine-tuning, retrieval — each is, at bottom, arithmetic on vectors. This module is about
+    making that arithmetic mean something. The goal is not to compute a dot product — you could
+    already do that. It is that when you later read <em>"attention scores are scaled dot products
+    of queries and keys,"</em> a picture appears.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Describe a vector geometrically and algebraically, and move between the two descriptions.</li>
+      <li>Compute and interpret a norm, and say exactly what normalisation discards.</li>
+      <li>Give all three readings of the dot product and say when each is the useful one.</li>
+      <li>Explain why cosine similarity is used for text rather than Euclidean distance.</li>
+      <li>State what an attention score is measuring.</li>
+    </ol>
+  </div>
+</section>
+
+## What a Vector Is
+
+The misconception this module exists to fix: <strong>a vector is a list of numbers.</strong>
+It is not. A vector is a point in a space — or equivalently an arrow from the origin to that
+point — and the list of numbers is a <em>description</em> of it, written in a particular
+coordinate system. The distinction sounds pedantic and is not: the coordinates are how you
+store a vector; the geometry is what the vector <em>means</em>. Until the picture flips from
+"list" to "point," every later geometric argument passes through as vocabulary.
+
+You already own the intuition. A survey respondent who answered a ten-question battery is
+a point in a ten-dimensional space — one axis per question, their answers as coordinates.
+Two respondents with similar politics sit near each other in that space. Nothing was added
+to the data by saying this; the geometry was always there. Nobody drew it.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    Take two respondents to that ten-question battery. What, concretely, would it mean for the
+    <em>distance</em> between their two points to be small? And is there information in the
+    <em>direction</em> from one respondent to the other?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        Small distance means they gave nearly the same answer to every question — disagreement,
+        aggregated across all ten axes at once. And yes: the direction from one respondent to the
+        other says <em>which questions</em> account for the disagreement. Directions in these
+        spaces carry meaning — that is the property word embeddings exploit when "king − man + woman"
+        lands near "queen," and it falls out of nothing more than treating data as geometry.
+      </p>
+    </div>
+  </details>
+</div>
+
+Because a vector is a geometric object, it supports two kinds of manipulation, and being able
+to move between them is the first objective. <em>Algebraically</em>, you add vectors
+coordinate-by-coordinate and stretch them by multiplying every coordinate by the same number.
+<em>Geometrically</em>, addition places arrows head-to-tail, and scalar multiplication stretches
+or flips an arrow without changing the line it lies on. Every computation in this track can be
+read both ways, and whenever one reading is opaque the other is usually not.
+
+<details class="appendix-box">
+  <summary>Appendix · vector spaces, span, basis, dimension</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.axiomsA} />
+    <Tex tex={math.axiomsB} />
+    <Tex tex={math.spanBasis} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A vector is a point or direction in a space; the coordinates are a description of it, not
+    the thing itself. Your data was always geometric — embedding methods did not add the
+    geometry, they learned <em>where to put the points</em>.
+  </p>
+</div>
+
+## Length and Normalisation
+
+The first genuinely geometric quantity: how long is a vector?
+
+<div class="formula-block">
+  <Tex tex={math.normDef} />
+  <Tex class="formula-block__caption" tex={math.normCaption} />
+</div>
+
+The norm is actual length — the straight-line distance from the origin to the point. For a
+document represented as word counts, the norm mostly reflects how <em>long the document is</em>:
+double the text and every count roughly doubles, so the vector doubles too, pointing the same
+way but reaching twice as far.
+
+That observation motivates the module's second tool. To <strong>normalise</strong> a vector is
+to divide it by its own norm, producing a <strong>unit vector</strong>: same direction, length
+exactly one.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Unit Vector</p>
+  <Tex tex={math.unitDef} />
+</div>
+
+Be precise about the trade, because it is a modelling decision and not a formality:
+<strong>normalisation throws magnitude away, on purpose.</strong> Whether that is right depends
+entirely on what magnitude encodes in your data. For text, magnitude is usually document
+length — a nuisance parameter you are glad to lose. For a spending profile, magnitude is how
+much was spent — possibly the entire point. The mathematics will not warn you either way;
+knowing what the discarded quantity <em>meant</em> is your job, not the formula's.
+
+<details class="appendix-box">
+  <summary>Appendix · norms other than Euclidean</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.otherNorms} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    The norm measures length; normalisation deletes it, keeping pure direction. For text this
+    is usually what you want, because length is about how much was written, not what it was about.
+  </p>
+</div>
+
+## The Dot Product
+
+The single most load-bearing operation in this entire curriculum. It has three readings, and
+the payload of this section is that they are the same number.
+
+<strong>Reading one — algebraic.</strong> Multiply matching coordinates and sum:
+
+<div class="formula-block">
+  <Tex tex={math.dotAlg} />
+  <Tex class="formula-block__caption" tex={math.dotAlgCaption} />
+</div>
+
+This is the reading computers use — a few multiplications and additions, which is why GPUs can
+do trillions of them per second. It is also, on its own, meaningless: staring at the formula
+tells you nothing about <em>what the number says</em>.
+
+<strong>Reading two — geometric.</strong> The same number, computed from lengths and the angle:
+
+<div class="formula-block">
+  <Tex tex={math.dotGeo} />
+  <Tex class="formula-block__caption" tex={math.dotGeoCaption} />
+</div>
+
+<strong>Reading three — projective.</strong> How much of one vector points along the other:
+the dot product is the length of the shadow that <em>a</em> casts on <em>b</em>'s direction,
+times the length of <em>b</em>. When you drop a perpendicular from the tip of <em>a</em> onto
+the line through <em>b</em>, the foot of that perpendicular marks the shadow. This reading is
+the one attention needs: it answers <em>"how much does this vector contain of that direction?"</em>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Dot Product</p>
+  <Tex tex={math.dotDef} />
+</div>
+
+And one property that most treatments skip past, even though downstream mechanisms depend on
+it: <strong>the sign carries meaning.</strong> A positive dot product means the vectors are
+aligned — less than 90&deg; apart. Exactly zero means <strong>orthogonal</strong>, and for
+embeddings the right reading of orthogonal is <em>unrelated</em> — not opposite, simply nothing
+to do with each other. Negative means opposed — pointing in contrary directions. Keep the
+three-way distinction; it recurs from attention scores to preference optimisation.
+
+{/* vector-playground widget lands here in increment 1.5 */}
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    One number, three readings: coordinate arithmetic (what machines compute), lengths times
+    the cosine of the angle (what it measures), and projection (how much of one direction is
+    inside another). Positive is aligned, zero is unrelated, negative is opposed.
+  </p>
+</div>
+
+## Cosine Similarity
+
+The dot product entangles two things: how aligned the vectors are, and how long they are.
+Sometimes you want exactly that mixture — attention will — but for comparing documents you
+usually want alignment alone. The fix is the same move as normalisation: divide the lengths out.
+
+<div class="formula-block">
+  <Tex tex={math.cosine} />
+  <Tex class="formula-block__caption" tex={math.cosineCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Cosine Similarity</p>
+  <Tex tex={math.cosineDef} />
+</div>
+
+Why is this the standard similarity measure for text? Because of what each measure responds
+to. Euclidean distance between two document vectors responds to <em>everything</em> —
+direction and magnitude both — and for text, magnitude is length. A tweet and a five-thousand-word
+report on the same topic sit far apart in Euclidean terms purely because one is longer. Cosine
+ignores that: it asks only whether they point the same way. The same logic runs from the sparse
+count vectors of classical text analysis to the dense embeddings of the LLMs track — the
+vectors changed, the comparison did not.
+
+Notice also what you get by combining this section with the last: <strong>for unit vectors,
+the dot product <em>is</em> the cosine similarity</strong> — the denominators are both 1 and
+disappear. This one-line fact is why real systems normalise their embeddings once and then use
+plain dot products for search: the cheap operation and the right-invariance operation become
+the same operation.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Cosine similarity is the dot product with magnitude divided out — direction-only agreement.
+    Text uses it because document length is noise, and for unit vectors it coincides with the
+    dot product, which is why embedding pipelines normalise once and dot-product ever after.
+  </p>
+</div>
+
+## Where This Lands: Attention
+
+Here is where this module's tools point. Inside a transformer, every token position asks a
+question of every other position. The question is a vector <strong>q</strong> (a query); each
+position's offer is a vector <strong>k</strong> (a key); and the relevance of that offer to
+this question is —
+
+<div class="formula-block">
+  <Tex tex={math.attnScore} />
+  <Tex class="formula-block__caption" tex={math.attnCaption} />
+</div>
+
+— a dot product. An attention score measures <em>how much this position's question aligns with
+that position's offer</em>, in precisely the sense you now own: projection of one vector onto
+another, sign and all. When the course's transformer module walks the full mechanism, this is
+the step where the "understanding" happens; the rest is bookkeeping around it.
+
+One honest loose end, flagged rather than glossed: the division by the square root of the key
+dimension. It is doing real statistical work, and explaining it requires knowing how the
+variance of a sum of random terms grows — machinery that belongs to M7. Hold the question
+<em>"why that denominator?"</em>; it will be answered, not waved at.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    Suppose the score between a particular query and a particular key comes out near zero.
+    What is the model "saying" about those two positions? And why is "unrelated" a better
+    reading than "opposite"?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        A near-zero score means the query finds essentially nothing of its direction in that
+        key — the offer is orthogonal to the question, irrelevant rather than contrary.
+        "Opposite" is a different geometry: a strongly <em>negative</em> score, the key pointing
+        against the query. The distinction matters because the scores next pass through a
+        softmax, which treats "irrelevant" and "opposed" very differently — a story the
+        transformer module picks up.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    An attention score is a dot product between a query and a key — a measurement of alignment
+    between what one position is looking for and what another contains. The scaling factor is
+    a genuine open question here, and M7 closes it.
+  </p>
+</div>
+
+## Problem Set
+
+Mathematics is learned by doing problems, and this problem set is the module's real assessment.
+Six problems, easy to hard. Do them on paper; reveal each solution only after committing to
+an answer.
+
+<div class="problem-set">
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 1 <span class="problem-tag">mechanical</span></p>
+    <p>
+      For each pair, compute both norms and the dot product, then classify the pair as aligned,
+      orthogonal, or opposed: (a)&nbsp;(3,&nbsp;4) and (6,&nbsp;8); (b)&nbsp;(2,&nbsp;&minus;1) and
+      (1,&nbsp;2); (c)&nbsp;(1,&nbsp;3) and (&minus;2,&nbsp;&minus;6).
+    </p>
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <p>
+          (a)&nbsp;Norms 5 and 10; dot product 18&nbsp;+&nbsp;32&nbsp;=&nbsp;50&nbsp;=&nbsp;5&nbsp;&times;&nbsp;10 — the full
+          product of the norms, so the angle is 0&deg;: aligned (the second is twice the first).
+          (b)&nbsp;Norms &radic;5 and &radic;5; dot product 2&nbsp;&minus;&nbsp;2&nbsp;=&nbsp;0: orthogonal.
+          (c)&nbsp;Norms &radic;10 and 2&radic;10; dot product &minus;2&nbsp;&minus;&nbsp;18&nbsp;=&nbsp;&minus;20&nbsp;=&nbsp;&minus;&radic;10&nbsp;&times;&nbsp;2&radic;10:
+          fully opposed (the second is &minus;2 times the first).
+        </p>
+      </div>
+    </details>
+  </div>
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 2 <span class="problem-tag">mechanical</span></p>
+    <p>
+      Normalise the vector (3,&nbsp;4). Verify that the result has unit length.
+    </p>
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <p>
+          The norm is &radic;(9&nbsp;+&nbsp;16)&nbsp;=&nbsp;5, so the unit vector is (0.6,&nbsp;0.8).
+          Check: 0.36&nbsp;+&nbsp;0.64&nbsp;=&nbsp;1, so the norm is &radic;1&nbsp;=&nbsp;1. Same direction, length one.
+        </p>
+      </div>
+    </details>
+  </div>
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 3 <span class="problem-tag">conceptual</span></p>
+    <Tex tex={math.probThree} />
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <Tex tex={math.probThreeSol} />
+      </div>
+    </details>
+  </div>
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 4 <span class="problem-tag">conceptual</span></p>
+    <p>
+      Show that for unit vectors, the dot product equals the cosine similarity. This is one
+      line; the point is to see it happen.
+    </p>
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <Tex tex={math.probFourSol} />
+      </div>
+    </details>
+  </div>
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 5 <span class="problem-tag">conceptual</span></p>
+    <p>
+      Two word embeddings have a dot product of exactly zero. What does that say about the two
+      words? Why is "unrelated" the right reading rather than "opposite"?
+    </p>
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <p>
+          Zero means orthogonal: neither vector contains any component of the other's direction.
+          "Opposite" would be a <em>negative</em> dot product — the vectors sharing a line but
+          pointing against each other, like antonyms sharing a semantic axis with reversed sign.
+          Orthogonality is the absence of any shared axis at all: the words' meanings simply do
+          not interact. "Cardiology" and "sonnet" are orthogonal; "hot" and "cold" are opposed —
+          and being opposed is itself a strong semantic relationship.
+        </p>
+      </div>
+    </details>
+  </div>
+
+  <div class="problem-set__problem">
+    <p class="problem-set__heading">Problem 6 <span class="problem-tag">extension</span></p>
+    <p>
+      Take two <em>random</em> unit vectors in a high-dimensional space — say 768 dimensions.
+      Their dot product turns out to be very close to zero, almost always. Argue why this should
+      be true, and say what it implies for similarity search over embeddings.
+    </p>
+    <details class="problem-set__solution">
+      <summary>Solution</summary>
+      <div>
+        <Tex tex={math.probSixSol} />
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    A vector is a point or a direction in a space, and its coordinates are a description, not
+    the thing itself — a flip that makes your existing data geometric. The norm measures length;
+    normalisation deletes it, keeping pure direction, which for text removes the nuisance of
+    document size. The dot product is one number with three readings — coordinate arithmetic,
+    lengths times the cosine, and projection — whose sign distinguishes aligned from unrelated
+    from opposed. Divide out the lengths and it becomes cosine similarity, the direction-only
+    comparison text analysis runs on; keep the lengths in and it is the raw material of an
+    attention score, the transformer's unit of relevance. One open question was planted on
+    purpose: why attention divides by the square root of the key dimension. M7 pays that debt.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://www.3blue1brown.com/topics/linear-algebra" target="_blank" rel="noopener">3Blue1Brown, <em>Essence of Linear Algebra</em></a>: the geometric picture of vectors, animated; chapters 1–3 and 9 map onto this module.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em></a>: chapters 2–3 are this module's appendix layer at textbook depth, free online.</li>
+    <li><a href="https://web.stanford.edu/~jurafsky/slp3/6.pdf" target="_blank" rel="noopener">Jurafsky &amp; Martin, <em>Speech and Language Processing</em>, ch. 6</a>: vector semantics for text — where these tools meet documents, from counts to embeddings.</li>
+  </ul>
+</section>

@@ -5,6 +5,7 @@ const sections = [
   { id: 'agents', label: 'What Is an Agent?' },
   { id: 'react', label: 'The ReAct Pattern' },
   { id: 'failure-modes', label: 'Failure Modes' },
+  { id: 'evaluating-agents', label: 'Evaluating Agents' },
   { id: 'production', label: 'From Notebooks to Production' },
   { id: 'summary', label: 'Module Summary' },
 ];
@@ -50,7 +51,8 @@ const sections = [
         <li>Explain how an LLM agent works: tools, system prompt, parser, and execution loop.</li>
         <li>Build a ReAct agent that alternates between reasoning and tool use, and trace its decision-making step by step.</li>
         <li>Identify the four failure modes specific to agents (hallucination on missing data, format drift, redundant loops, cascading errors) and implement safeguards for each.</li>
-        <li>Evaluate agent output using provenance verification, connecting back to the faithfulness checks from <a href="/course/day-4">Module 4</a>.</li>
+        <li>Evaluate agent runs by outcome <em>and</em> by trajectory, connecting back to the faithfulness checks from <a href="/course/day-4">Module 4</a>.</li>
+        <li>Decide when an agent is the wrong design &mdash; and where the autonomy line sits in a research workflow.</li>
         <li>Use production tools (Codespaces, Claude Code, MCP) to move from notebook prototypes to real research workflows.</li>
       </ol>
     </div>
@@ -547,7 +549,160 @@ const sections = [
   </section>
 
   <!-- ===================================================================
-       SECTION 4: FROM NOTEBOOKS TO PRODUCTION
+       SECTION 4: EVALUATING AGENTS
+       =================================================================== -->
+  <section id="evaluating-agents">
+    <h2>Evaluating Agents</h2>
+    <p>
+      Every method in this course arrived with an evaluation protocol:
+      classification got Cohen&rsquo;s &kappa; and a validation sample
+      (<a href="/course/day-3">Module 3</a>), extraction got faithfulness
+      checks, RAG got separate retrieval and generation metrics
+      (<a href="/course/day-4">Module 4</a>). Agents are the hardest case,
+      because the thing you built does not just produce an answer &mdash;
+      it chooses its own path to the answer. Evaluating only the answer
+      leaves the path unexamined, and the path is where agents fail.
+    </p>
+
+    <h3>Trajectories, Not Just Outcomes</h3>
+    <p>
+      An agent can reach the right answer for the wrong reasons. It can
+      skip the literature search, hallucinate a plausible summary, and
+      happen to be correct; it can retrieve the wrong documents and be
+      rescued by the model&rsquo;s background knowledge. On a ten-question
+      demo, this looks like success. At scale, on questions where you
+      cannot check by eye, the same behaviour is silent fabrication.
+      Outcome accuracy alone cannot tell these cases apart.
+    </p>
+    <p>
+      The fix is <strong>trajectory review</strong>: reading the full
+      Thought&thinsp;/&thinsp;Action&thinsp;/&thinsp;Observation trace
+      against a short rubric, the same way you read a coder&rsquo;s
+      reasoning in qualitative work. Three questions cover most of it.
+      Did the agent take a defensible path &mdash; the tools a competent
+      research assistant would have chosen, in a sensible order? Is every
+      claim in the final answer grounded in an observation actually
+      returned by a tool, rather than imported from the model&rsquo;s
+      prior knowledge? And did it stop for the right reason &mdash;
+      because it had enough evidence, not because it hit the step limit?
+    </p>
+    <p>
+      Two practices make this manageable at research scale. First, keep a
+      <strong>fixed task battery</strong>: a set of questions with known
+      answers and known-good trajectories, re-run after <em>any</em>
+      change to the prompt, the model, or the tools. An agent is a
+      pipeline, and pipelines regress; the battery is your regression
+      test. Second, track <strong>cost per episode</strong> alongside
+      accuracy. Two agents with equal accuracy are not equal if one takes
+      three tool calls and the other takes nineteen &mdash; and a rising
+      average step count is often the first visible symptom of a prompt
+      change that broke something subtle.
+    </p>
+
+    <div class="stop-and-think">
+      <div class="stop-and-think__header">
+        <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span class="stop-and-think__label">Stop and Think</span>
+      </div>
+      <p>
+        Your agent answers a question correctly, but its trace shows it
+        never ran the search tool &mdash; the answer came entirely from
+        the model&rsquo;s parametric knowledge. Does this count as a
+        success? What would you need to believe about the next hundred
+        questions for that answer to be trustworthy?
+      </p>
+      <details>
+        <summary>Reveal</summary>
+        <div>
+          <p>
+            It is a failure dressed as a success. The workflow you designed
+            &mdash; search, then ground the answer in what was found &mdash;
+            did not run; you got a lucky draw from the model&rsquo;s
+            training data instead. Trusting the next hundred questions
+            means believing the model&rsquo;s background knowledge is
+            complete and current for your entire domain, which is exactly
+            the assumption RAG and tool use exist to avoid. Grounding
+            failures with correct answers are the most dangerous kind,
+            because outcome metrics will never surface them.
+          </p>
+        </div>
+      </details>
+    </div>
+
+    <h3>Orchestration: When Not to Use an Agent</h3>
+    <p>
+      There is a spectrum between the fixed pipelines of
+      <a href="/course/day-3">Module 3</a> and the free agent of this
+      module, and most research work belongs somewhere on it. Three
+      patterns cover the practical range. A <strong>fixed pipeline</strong>
+      calls the model at predetermined steps &mdash; classify, then
+      extract, then verify &mdash; with control flow you wrote and can
+      audit. A <strong>generator&ndash;judge</strong> design adds a second
+      model call that checks the first&rsquo;s output against the source
+      before it is accepted: a quality gate, not an autonomous loop. A
+      full <strong>agent</strong> lets the model write the control flow
+      itself at runtime.
+    </p>
+    <p>
+      The useful heuristic: <strong>an agent is a pipeline that writes
+      itself &mdash; so if you can write the pipeline in advance, write
+      it.</strong> A fixed pipeline is cheaper (no reasoning tokens spent
+      deciding what to do), reproducible (the same input takes the same
+      path every run), and auditable (a reviewer can read your control
+      flow as code). Reserve genuine autonomy for tasks where the path
+      honestly varies item by item &mdash; a literature search whose next
+      query depends on what the last one found &mdash; and even then,
+      constrain it: a small tool set, a tight step limit, and a judge at
+      the end. Autonomy is a cost you pay for flexibility, not a feature
+      to maximise.
+    </p>
+
+    <h3>The Autonomy Line</h3>
+    <p>
+      Every agentic research workflow needs an explicit answer to one
+      question: <strong>what may run unattended, and what may not?</strong>
+      On the safe side of the line sit tasks whose failures are cheap and
+      checkable &mdash; reformatting, deduplication, retrieval, first-pass
+      screening that a human will review anyway. On the far side sits
+      anything that enters the paper: reported quantities, sampled cases,
+      substantive interpretations. The rule from
+      <a href="/course/day-3">Module 3</a> does not soften because the
+      pipeline became autonomous &mdash; the agent is another coder, and
+      no coder&rsquo;s output enters your results unvalidated.
+    </p>
+    <p>
+      Treat the line as a design decision you write down, like a codebook
+      rule: which steps run unattended, which require review, and what
+      the validation plan is for anything the agent touched. A reviewer
+      who asks &ldquo;how do you know the agent did this correctly?&rdquo;
+      should get the same quality of answer as one asking about a human
+      research assistant &mdash; a protocol, a sample, an agreement
+      statistic, not reassurance.
+    </p>
+
+    <div class="key-takeaway">
+      <p class="key-takeaway__label">Key Takeaway</p>
+      <p>
+        Evaluate the path, not just the answer: trajectory review, a fixed
+        regression battery, and per-episode cost tracking are the agent
+        equivalents of the validation protocol you built in Module 3.
+        Prefer the least autonomy that does the job &mdash; and wherever
+        the agent&rsquo;s output enters your findings, it is another
+        coder, subject to the same validation as any other.
+      </p>
+    </div>
+
+    <h3>Resources</h3>
+    <ul class="resource-list">
+      <li><a href="https://arxiv.org/abs/2407.01502" target="_blank" rel="noopener">Kapoor et al. (2024), <em>AI Agents That Matter</em></a>: argues that agent benchmarks overstate capability by ignoring cost and reproducibility &mdash; the evaluation stance this section takes.</li>
+      <li><a href="https://arxiv.org/abs/2308.03688" target="_blank" rel="noopener">Liu et al. (2023), <em>AgentBench: Evaluating LLMs as Agents</em></a>: systematic multi-environment agent evaluation, and a template for building task batteries.</li>
+    </ul>
+  </section>
+
+  <!-- ===================================================================
+       SECTION 5: FROM NOTEBOOKS TO PRODUCTION
        =================================================================== -->
   <section id="production">
     <h2>From Notebooks to Production</h2>

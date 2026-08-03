@@ -1316,13 +1316,8 @@ const sections = [
 <!-- COMPONENT STYLES                                                    -->
 <!-- =================================================================== -->
 <style is:inline>
-/* â”€â”€ Shared widget tokens â”€â”€ */
+/* Widget chrome lives in global.css; page-specific tokens only here. */
 .widget-wrap {
-  margin: 2rem 0;
-  padding: 1.5rem;
-  background: var(--surface, #FFFFFF);
-  border: 1px solid var(--border, #E2E6EE);
-  border-radius: 12px;
   /* Muted sage for “success / faithful” — less saturated than #2D7D46 */
   --w-success: #4C6D60;
   --w-success-border: #C9D9CE;
@@ -1331,30 +1326,6 @@ const sections = [
   --w-success-bar: #7A9A8C;
   --w-chunk-teal: #4A6058;
   --w-chunk-teal-bg: #F4F8F6;
-}
-.widget-eyebrow {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent, #2D8ABF);
-  margin-bottom: 0.5rem;
-}
-.widget-title {
-  font-family: var(--font-display, 'Source Serif 4', Georgia, serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text, #1A1D27);
-  line-height: 1.25;
-  margin-bottom: 0.75rem;
-}
-.widget-intro {
-  font-size: 0.92rem;
-  color: var(--text-sec, #3D4455);
-  line-height: 1.65;
-  max-width: 620px;
-  margin-bottom: 1.5rem;
 }
 @keyframes widgetFadeIn {
   from { opacity: 0; }

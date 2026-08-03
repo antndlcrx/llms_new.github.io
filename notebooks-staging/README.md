@@ -1,7 +1,7 @@
 # Notebook staging
 
 Drafts of module notebooks awaiting publication to their real home,
-`antndlcrx/Intro-to-LLMs-DPIR` under `modules/{track}/` (migration §5).
+`Oxford-LLMs-Research/Intro-to-LLMs-for-Social-Science` under `modules/{track}/` (migration §5).
 Publishing requires a push to that repo — ask before doing it.
 
 Once a notebook is published there, set the module's `notebook` and `colab`

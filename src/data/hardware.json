@@ -1,0 +1,10 @@
+{
+  "asOf": "2026-08-03",
+  "gpus": [
+    { "name": "Colab T4 (free)", "vram": 15 },
+    { "name": "RTX 3090 / 4090", "vram": 24 },
+    { "name": "Colab A100 (Pro)", "vram": 40 },
+    { "name": "A100 80 GB (cloud)", "vram": 80 },
+    { "name": "2× A100 80 GB", "vram": 160 }
+  ]
+}

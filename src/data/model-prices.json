@@ -1,0 +1,30 @@
+{
+  "asOf": "2026-08-03",
+  "capabilityCost": [
+    { "name": "Claude Opus 4.6", "cap": 0.95, "cost": 0.55, "type": "closed" },
+    { "name": "Claude Sonnet 4.6", "cap": 0.89, "cost": 0.32, "type": "closed" },
+    { "name": "GPT-5.4", "cap": 0.94, "cost": 0.38, "type": "closed" },
+    { "name": "GPT-5.2", "cap": 0.90, "cost": 0.28, "type": "closed" },
+    { "name": "Gemini 3.1 Pro", "cap": 0.96, "cost": 0.42, "type": "closed" },
+    { "name": "Gemini 2.5 Flash", "cap": 0.78, "cost": 0.05, "type": "closed" },
+    { "name": "DeepSeek V3.2", "cap": 0.85, "cost": 0.03, "type": "open" },
+    { "name": "DeepSeek R1", "cap": 0.88, "cost": 0.16, "type": "open" },
+    { "name": "Qwen 3.5", "cap": 0.84, "cost": 0.12, "type": "open" },
+    { "name": "Llama 4 Maverick", "cap": 0.80, "cost": 0.06, "type": "open" },
+    { "name": "Mistral Large", "cap": 0.82, "cost": 0.20, "type": "open" },
+    { "name": "GLM-5", "cap": 0.86, "cost": 0.14, "type": "open" }
+  ],
+  "apiPricing": [
+    { "name": "Gemini 2.5 Flash", "provider": "Google", "tier": "budget", "inP": 0.15, "outP": 0.60, "speed": 200 },
+    { "name": "GPT-5.4 nano", "provider": "OpenAI", "tier": "budget", "inP": 0.20, "outP": 1.25, "speed": 200 },
+    { "name": "Gemini 3 Flash", "provider": "Google", "tier": "budget", "inP": 0.50, "outP": 3.00, "speed": 150 },
+    { "name": "GPT-5.4 mini", "provider": "OpenAI", "tier": "mid", "inP": 0.75, "outP": 4.50, "speed": 120 },
+    { "name": "Haiku 4.5", "provider": "Anthropic", "tier": "mid", "inP": 1.00, "outP": 5.00, "speed": 120 },
+    { "name": "Gemini 2.5 Pro", "provider": "Google", "tier": "mid", "inP": 1.25, "outP": 10.00, "speed": 60 },
+    { "name": "GPT-5.4", "provider": "OpenAI", "tier": "frontier", "inP": 2.50, "outP": 15.00, "speed": 40 },
+    { "name": "Sonnet 4.6", "provider": "Anthropic", "tier": "frontier", "inP": 3.00, "outP": 15.00, "speed": 40 },
+    { "name": "Opus 4.6", "provider": "Anthropic", "tier": "frontier", "inP": 5.00, "outP": 25.00, "speed": 20 },
+    { "name": "Self-hosted 8B", "provider": "vLLM + A100", "tier": "self", "inP": 0, "outP": 0, "speed": 50, "gpuH": 1.50 },
+    { "name": "Fine-tuned encoder", "provider": "DeBERTa (local)", "tier": "self", "inP": 0, "outP": 0, "speed": 500, "gpuH": 0.50 }
+  ]
+}

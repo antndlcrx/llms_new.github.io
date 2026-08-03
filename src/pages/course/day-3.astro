@@ -1,5 +1,7 @@
 ﻿---
 import CourseLayout from '../../layouts/CourseLayout.astro';
+import modelPrices from '../../data/model-prices.json';
+import hardwareData from '../../data/hardware.json';
 
 const sections = [
   { id: 'fine-tuning', label: 'Fine-Tuning' },
@@ -418,7 +420,7 @@ const math = {
       </div>
 
       <div class="lora-rcard">
-        <div class="lora-rcard__hdr"><span class="lora-rcard__name">Hardware Feasibility</span></div>
+        <div class="lora-rcard__hdr"><span class="lora-rcard__name">Hardware Feasibility</span><span style="font-size:0.65rem;color:var(--text-dim,#9CA3AF);">as of {hardwareData.asOf}</span></div>
         <div class="lora-hwlist" id="lora-hwlist"></div>
       </div>
 
@@ -520,7 +522,7 @@ const math = {
   .lora-method__body strong{color:var(--text-sec,#3D4455);font-weight:600;}
 </style>
 
-<script is:inline>
+<script is:inline define:vars={{ HARDWARE_DATA: hardwareData.gpus }}>
 (function(){
   var $=function(id){return document.getElementById(id)};
   var paramSteps=[
@@ -545,7 +547,7 @@ const math = {
     {params:9,rank:2,qlora:true,insight:'<strong>Llama 3.3 70B</strong> requires serious hardware even with 4-bit quantisation. For most social science classification, a 4\u201314B model with LoRA will be more practical.'},
     {params:1,rank:1,qlora:false,insight:'<strong>DeBERTaV3-base (184M params)</strong> uses standard full fine-tuning \u2014 no LoRA needed. All 184M parameters are trainable, yet the model fits in ~2 GB VRAM. For fixed-category classification, this is typically the best choice.'}
   ];
-  var hardware=[{name:'Colab T4 (free)',vram:15},{name:'RTX 3090 / 4090',vram:24},{name:'Colab A100 (Pro)',vram:40},{name:'A100 80 GB (cloud)',vram:80},{name:'2\u00d7 A100 80 GB',vram:160}];
+  var hardware=HARDWARE_DATA;
   var sl={params:$('lora-sl-params'),rank:$('lora-sl-rank')};
   var hidSl=$('lora-sl-hidden'),laySl=$('lora-sl-layers'),qlora=$('lora-qlora');
   function syncArch(pi){
@@ -1119,7 +1121,7 @@ const math = {
   <div class="ce-widget__subtitle">
     Set your corpus parameters, then compare costs across model tiers.
     All estimates assume a classification task (short output).
-    Model names and prices reflect published pricing as of early 2026; verify against each provider&rsquo;s current pricing page before budgeting a real project, as models and prices change frequently.
+    Model names and prices reflect published pricing as of <strong>{modelPrices.asOf}</strong>; verify against each provider&rsquo;s current pricing page before budgeting a real project, as models and prices change frequently.
   </div>
 
   <div class="ce-presets" id="ce-presets">
@@ -1289,26 +1291,14 @@ const math = {
   .ce-method-table td{padding:0.3rem 0.5rem;border-bottom:1px solid var(--border,#E2E6EE);color:var(--text-sec,#3D4455);}
 </style>
 
-<script is:inline>
+<script is:inline define:vars={{ PRICING_DATA: modelPrices.apiPricing }}>
 (function(){
   var $=function(id){return document.getElementById(id)};
   var corpusSteps=[100,500,1000,5000,10000,50000,100000,250000,500000,1000000,2000000,5000000,10000000];
   var textLenSteps=[30,50,100,200,400,800,1500];
   var promptSteps=[50,100,200,400,800,1500];
   var outputSteps=[5,10,50,100,200];
-  var models=[
-    {name:'Gemini 2.5 Flash',provider:'Google',tier:'budget',inP:0.15,outP:0.60,speed:200},
-    {name:'GPT-5.4 nano',provider:'OpenAI',tier:'budget',inP:0.20,outP:1.25,speed:200},
-    {name:'Gemini 3 Flash',provider:'Google',tier:'budget',inP:0.50,outP:3.00,speed:150},
-    {name:'GPT-5.4 mini',provider:'OpenAI',tier:'mid',inP:0.75,outP:4.50,speed:120},
-    {name:'Haiku 4.5',provider:'Anthropic',tier:'mid',inP:1.00,outP:5.00,speed:120},
-    {name:'Gemini 2.5 Pro',provider:'Google',tier:'mid',inP:1.25,outP:10.00,speed:60},
-    {name:'GPT-5.4',provider:'OpenAI',tier:'frontier',inP:2.50,outP:15.00,speed:40},
-    {name:'Sonnet 4.6',provider:'Anthropic',tier:'frontier',inP:3.00,outP:15.00,speed:40},
-    {name:'Opus 4.6',provider:'Anthropic',tier:'frontier',inP:5.00,outP:25.00,speed:20},
-    {name:'Self-hosted 8B',provider:'vLLM + A100',tier:'self',inP:0,outP:0,speed:50,gpuH:1.50},
-    {name:'Fine-tuned encoder',provider:'DeBERTa (local)',tier:'self',inP:0,outP:0,speed:500,gpuH:0.50}
-  ];
+  var models=PRICING_DATA;
   var presetData=[
     {corpus:2,textlen:1,prompt:1,output:1,batch:false,insight:'For a pilot study of <strong>1,000 tweets</strong>, every model is effectively free (under $1). Cost only becomes a factor at 50K+ texts with mid-range or frontier models. Start cheap, validate, then scale.'},
     {corpus:5,textlen:2,prompt:2,output:1,batch:true,insight:'<strong>50,000 news articles</strong> with a mid-range model costs $15\u201360. This is where the batch API discount (50%) starts to matter. Budget models handle this for under $5.'},

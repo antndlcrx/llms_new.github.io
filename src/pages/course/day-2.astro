@@ -1,5 +1,6 @@
 ﻿---
 import CourseLayout from '../../layouts/CourseLayout.astro';
+import modelPrices from '../../data/model-prices.json';
 
 const sections = [
   { id: 'post-training', label: 'Post-Training' },
@@ -1125,10 +1126,11 @@ const math = {
       <svg id="model-landscape-svg" viewBox="0 0 520 380" style="width: 100%; max-width: 520px; display: block; margin: 0 auto;"></svg>
       <p class="attention-explorer__insight" id="model-landscape-insight">
         Illustrative chart based on approximate positions from public
-        benchmarks and API pricing (early 2026). Model names, positions,
-        and costs change frequently. This chart shows the <em>structure</em>
-        of the landscape (frontier, open/closed clustering), not precise
-        coordinates. Always verify current data before choosing a model.
+        benchmarks and API pricing, as of <strong>{modelPrices.asOf}</strong>.
+        Model names, positions, and costs change frequently. This chart shows
+        the <em>structure</em> of the landscape (frontier, open/closed
+        clustering), not precise coordinates. Always verify current data
+        before choosing a model.
       </p>
     </div>
 
@@ -2131,27 +2133,14 @@ const math = {
 </script>
 
 <!-- 6. MODEL LANDSCAPE CHART -->
-<script is:inline>
+<script is:inline define:vars={{ MODEL_DATA: modelPrices.capabilityCost }}>
 (function() {
   var svg = document.getElementById("model-landscape-svg");
   var insight = document.getElementById("model-landscape-insight");
   var explorer = document.getElementById("model-explorer");
   if (!svg || !explorer) return;
 
-  var models = [
-    { name: "Claude Opus 4.6", cap: 0.95, cost: 0.55, type: "closed" },
-    { name: "Claude Sonnet 4.6", cap: 0.89, cost: 0.32, type: "closed" },
-    { name: "GPT-5.4", cap: 0.94, cost: 0.38, type: "closed" },
-    { name: "GPT-5.2", cap: 0.90, cost: 0.28, type: "closed" },
-    { name: "Gemini 3.1 Pro", cap: 0.96, cost: 0.42, type: "closed" },
-    { name: "Gemini 2.5 Flash", cap: 0.78, cost: 0.05, type: "closed" },
-    { name: "DeepSeek V3.2", cap: 0.85, cost: 0.03, type: "open" },
-    { name: "DeepSeek R1", cap: 0.88, cost: 0.16, type: "open" },
-    { name: "Qwen 3.5", cap: 0.84, cost: 0.12, type: "open" },
-    { name: "Llama 4 Maverick", cap: 0.80, cost: 0.06, type: "open" },
-    { name: "Mistral Large", cap: 0.82, cost: 0.20, type: "open" },
-    { name: "GLM-5", cap: 0.86, cost: 0.14, type: "open" }
-  ];
+  var models = MODEL_DATA;
 
   var filter = "all";
 

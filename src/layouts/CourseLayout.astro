@@ -15,17 +15,23 @@ interface Props {
 
 const { day, title, description, sections } = Astro.props;
 
+const NOTEBOOK_REPO = 'https://github.com/antndlcrx/Intro-to-LLMs-DPIR/blob/main/course_notebooks';
+const COLAB_BASE = 'https://colab.research.google.com/github/antndlcrx/Intro-to-LLMs-DPIR/blob/main/course_notebooks';
+
 const modules = [
-  { day: 1, title: 'Foundations', slug: 'day-1' },
-  { day: 2, title: 'From Models to Tools', slug: 'day-2' },
-  { day: 3, title: 'Deploying for Research', slug: 'day-3' },
-  { day: 4, title: 'Extraction, Summarization, and RAG', slug: 'day-4' },
-  { day: 5, title: 'Agentic Workflows', slug: 'day-5' },
+  { day: 1, title: 'Foundations', slug: 'day-1', notebook: 'day_1_foundations/day1_embeddings_to_transformers.ipynb' },
+  { day: 2, title: 'From Models to Tools', slug: 'day-2', notebook: 'day_2_models_to_tools/day2_from_models_to_tools.ipynb' },
+  { day: 3, title: 'Deploying for Research', slug: 'day-3', notebook: 'day_3_deploying_for_research/day3_deploying_for_research.ipynb' },
+  { day: 4, title: 'Extraction, Summarization, and RAG', slug: 'day-4', notebook: 'day_4_rag_survey_response_prediciton/day4_social_science_applications.ipynb' },
+  { day: 5, title: 'Agentic Workflows', slug: 'day-5', notebook: 'day_5_agents/day5_agentic_workflows.ipynb' },
 ];
 
 const currentIndex = modules.findIndex(m => m.day === day);
+const current = modules[currentIndex];
 const prev = currentIndex > 0 ? modules[currentIndex - 1] : null;
 const next = currentIndex < modules.length - 1 ? modules[currentIndex + 1] : null;
+const colabUrl = current ? `${COLAB_BASE}/${current.notebook}` : null;
+const githubUrl = current ? `${NOTEBOOK_REPO}/${current.notebook}` : null;
 ---
 
 <Base title={`Module ${day}: ${title}`} description={description}>
@@ -77,6 +83,16 @@ const next = currentIndex < modules.length - 1 ? modules[currentIndex + 1] : nul
         <p class="course-header__day">Module {day} of 5</p>
         <h1 class="course-header__title">{title}</h1>
         <p class="course-header__desc">{description}</p>
+        {colabUrl && (
+          <p class="course-header__notebook" style="margin-top:18px; display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+            <a class="btn-primary" href={colabUrl} target="_blank" rel="noopener">
+              Open the Module {day} notebook in Colab <span class="arrow">→</span>
+            </a>
+            <a class="btn-link-v3" href={githubUrl} target="_blank" rel="noopener">
+              View on GitHub <span class="arrow">→</span>
+            </a>
+          </p>
+        )}
       </header>
 
       <div class="prose">

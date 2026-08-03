@@ -118,6 +118,49 @@ const sections = [
     <!-- Faithfulness failure modes interactive -->
     <div id="faithfulness-failures-root"></div>
 
+    <div class="visual-diagram">
+      <svg viewBox="0 0 560 250" width="560" height="250" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto; font-family: var(--font-body, Inter, system-ui, sans-serif); font-size: 11px;">
+        <!-- Source text -->
+        <rect x="20" y="95" width="130" height="60" rx="6" style="fill: var(--surface, #F2F4F8); stroke: var(--border, #E2E6EE);" stroke-width="1.5"/>
+        <text x="85" y="115" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Source text</text>
+        <line x1="38" y1="128" x2="132" y2="128" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" opacity="0.5"/>
+        <line x1="38" y1="137" x2="120" y2="137" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" opacity="0.5"/>
+        <line x1="38" y1="146" x2="126" y2="146" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" opacity="0.5"/>
+        <!-- Extraction arrow to fan-out -->
+        <line x1="150" y1="125" x2="230" y2="125" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5"/>
+        <text x="190" y="115" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="10">extraction</text>
+        <path d="M 230,125 L 300,46" fill="none" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4fmArr)"/>
+        <path d="M 230,125 L 300,125" fill="none" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4fmArr)"/>
+        <path d="M 230,125 L 300,204" fill="none" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4fmArr)"/>
+        <!-- Hallucination -->
+        <rect x="310" y="20" width="230" height="52" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <circle cx="334" cy="46" r="11" style="fill: var(--accent, #2D8ABF);"/>
+        <text x="334" y="51" text-anchor="middle" style="fill: #fff;" font-weight="700" font-size="13">+</text>
+        <text x="354" y="41" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Hallucination</text>
+        <text x="354" y="58" style="fill: var(--text-muted, #6B7280);" font-size="10">adds what is not in the source</text>
+        <!-- Omission -->
+        <rect x="310" y="99" width="230" height="52" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <circle cx="334" cy="125" r="11" style="fill: var(--accent, #2D8ABF);"/>
+        <text x="334" y="130" text-anchor="middle" style="fill: #fff;" font-weight="700" font-size="13">&#8722;</text>
+        <text x="354" y="120" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Omission</text>
+        <text x="354" y="137" style="fill: var(--text-muted, #6B7280);" font-size="10">drops what is in the source</text>
+        <!-- Distortion -->
+        <rect x="310" y="178" width="230" height="52" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <circle cx="334" cy="204" r="11" style="fill: var(--accent, #2D8ABF);"/>
+        <text x="334" y="209" text-anchor="middle" style="fill: #fff;" font-weight="700" font-size="13">~</text>
+        <text x="354" y="199" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Distortion</text>
+        <text x="354" y="216" style="fill: var(--text-muted, #6B7280);" font-size="10">changes what is in the source</text>
+        <defs>
+          <marker id="d4fmArr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--text-dim, #9CA3AF)"/></marker>
+        </defs>
+      </svg>
+      <p class="visual-diagram__caption">
+        The three ways extraction fails, defined by their relationship to the
+        source: hallucination adds, omission drops, distortion changes. Every
+        faithfulness check in this module is a test against one of these three.
+      </p>
+    </div>
+
     <p>
       <strong>Hallucination:</strong> the model invents information that
       is not in the source text. It might attribute a finding to a citation
@@ -364,6 +407,62 @@ const sections = [
 
     <!-- RAG pipeline step-by-step interactive -->
     <div id="rag-pipeline-root"></div>
+
+    <div class="visual-diagram">
+      <svg viewBox="0 0 640 340" width="640" height="340" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto; font-family: var(--font-body, Inter, system-ui, sans-serif); font-size: 11px;">
+        <!-- Indexing lane -->
+        <text x="24" y="26" style="fill: var(--text-dim, #9CA3AF);" font-size="10" letter-spacing="1" font-weight="600">INDEXING &#8212; DONE ONCE</text>
+        <rect x="24" y="42" width="108" height="32" rx="6" style="fill: var(--surface, #F2F4F8); stroke: var(--border, #E2E6EE);" stroke-width="1.5"/>
+        <text x="78" y="62" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Documents</text>
+        <line x1="132" y1="58" x2="186" y2="58" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <text x="159" y="50" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">chunk</text>
+        <rect x="186" y="42" width="108" height="32" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <text x="240" y="62" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Chunks</text>
+        <line x1="294" y1="58" x2="348" y2="58" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <text x="321" y="50" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">embed</text>
+        <rect x="348" y="42" width="108" height="32" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <text x="402" y="62" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Embeddings</text>
+        <line x1="456" y1="58" x2="510" y2="58" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <text x="483" y="50" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">store</text>
+        <rect x="510" y="42" width="106" height="32" rx="6" style="fill: var(--accent-bg, #EBF7FD); stroke: var(--accent, #2D8ABF);" stroke-width="1.5"/>
+        <text x="563" y="62" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Vector index</text>
+        <!-- Index to retrieval elbow -->
+        <path d="M 563,74 L 563,140 L 402,140 L 402,206" fill="none" style="stroke: var(--accent-hover, #3BA3D4);" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#d4ragArrB)"/>
+        <text x="486" y="132" text-anchor="middle" style="fill: var(--accent-hover, #3BA3D4);" font-size="9">nearest neighbours</text>
+        <!-- Query lane -->
+        <text x="24" y="192" style="fill: var(--text-dim, #9CA3AF);" font-size="10" letter-spacing="1" font-weight="600">QUERY TIME &#8212; EVERY QUESTION</text>
+        <rect x="24" y="206" width="108" height="32" rx="6" style="fill: var(--surface, #F2F4F8); stroke: var(--border, #E2E6EE);" stroke-width="1.5"/>
+        <text x="78" y="226" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Question</text>
+        <line x1="132" y1="222" x2="186" y2="222" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <text x="159" y="214" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">embed</text>
+        <rect x="186" y="206" width="108" height="32" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <text x="240" y="226" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Query vector</text>
+        <line x1="294" y1="222" x2="348" y2="222" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <rect x="348" y="206" width="108" height="32" rx="6" style="fill: var(--blue-8, #B0ECF9); stroke: var(--blue-1, #1E5A8A);" stroke-width="1.5"/>
+        <text x="402" y="226" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Top-k chunks</text>
+        <line x1="456" y1="222" x2="510" y2="222" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <text x="483" y="214" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">+ question</text>
+        <rect x="510" y="206" width="106" height="32" rx="6" style="fill: var(--blue-8, #B0ECF9); stroke: var(--blue-1, #1E5A8A);" stroke-width="1.5"/>
+        <text x="563" y="226" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Generator</text>
+        <!-- Answer -->
+        <line x1="563" y1="238" x2="563" y2="272" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d4ragArr)"/>
+        <rect x="430" y="272" width="186" height="32" rx="6" style="fill: var(--accent-bg, #EBF7FD); stroke: var(--accent, #2D8ABF);" stroke-width="1.5"/>
+        <text x="523" y="292" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Grounded answer + sources</text>
+        <text x="24" y="292" style="fill: var(--text-dim, #9CA3AF);" font-size="10">Retrieval failures happen in the top lane;</text>
+        <text x="24" y="306" style="fill: var(--text-dim, #9CA3AF);" font-size="10">generation failures in the bottom one.</text>
+        <defs>
+          <marker id="d4ragArr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--text-dim, #9CA3AF)"/></marker>
+          <marker id="d4ragArrB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--accent-hover, #3BA3D4)"/></marker>
+        </defs>
+      </svg>
+      <p class="visual-diagram__caption">
+        The full RAG pipeline. The indexing lane runs once, offline: documents
+        are chunked, embedded, and stored. The query lane runs per question:
+        the question is embedded, matched against the index, and the retrieved
+        chunks are handed to the generator with the question. The two lanes
+        fail differently &#8212; which is why they are evaluated separately.
+      </p>
+    </div>
 
     <h3>Step 1: Chunking</h3>
     <p>

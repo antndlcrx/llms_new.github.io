@@ -198,6 +198,51 @@ const sections = [
       synthesize correctly but from incomplete evidence?
     </p>
 
+    <div class="visual-diagram">
+      <svg viewBox="0 0 460 340" width="460" height="340" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto; font-family: var(--font-body, Inter, system-ui, sans-serif); font-size: 11px;">
+        <!-- Thought -->
+        <rect x="150" y="30" width="140" height="40" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <text x="220" y="47" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Thought</text>
+        <text x="220" y="62" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">what do I need next?</text>
+        <line x1="220" y1="70" x2="220" y2="140" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d5reactArr)"/>
+        <!-- Action -->
+        <rect x="150" y="140" width="140" height="40" rx="6" style="fill: var(--blue-8, #B0ECF9); stroke: var(--blue-1, #1E5A8A);" stroke-width="1.5"/>
+        <text x="220" y="157" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Action</text>
+        <text x="220" y="172" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">a tool call</text>
+        <!-- Tools -->
+        <rect x="360" y="140" width="80" height="40" rx="6" style="fill: var(--surface, #F2F4F8); stroke: var(--border, #E2E6EE);" stroke-width="1.5"/>
+        <text x="400" y="164" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-weight="600">Tools</text>
+        <line x1="290" y1="152" x2="360" y2="152" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d5reactArr)"/>
+        <text x="325" y="144" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">call</text>
+        <path d="M 400,180 L 400,268 L 292,268" fill="none" style="stroke: var(--text-dim, #9CA3AF);" stroke-width="1.5" marker-end="url(#d5reactArr)"/>
+        <text x="352" y="260" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">result</text>
+        <!-- Observation -->
+        <rect x="150" y="248" width="140" height="40" rx="6" style="fill: var(--blue-9, #D5F5FD); stroke: var(--blue-2, #2272A8);" stroke-width="1.5"/>
+        <text x="220" y="265" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Observation</text>
+        <text x="220" y="280" text-anchor="middle" style="fill: var(--text-muted, #6B7280);" font-size="9">what came back</text>
+        <!-- Loop back -->
+        <path d="M 150,268 C 60,268 60,50 150,50" fill="none" style="stroke: var(--accent-hover, #3BA3D4);" stroke-width="1.5" marker-end="url(#d5reactArrB)"/>
+        <text x="48" y="160" text-anchor="middle" style="fill: var(--accent-hover, #3BA3D4);" font-size="9" transform="rotate(-90, 48, 160)">repeat until done</text>
+        <!-- Final answer -->
+        <path d="M 290,44 L 340,44" fill="none" style="stroke: var(--accent, #2D8ABF);" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#d5reactArrC)"/>
+        <text x="315" y="34" text-anchor="middle" style="fill: var(--accent, #2D8ABF);" font-size="9">enough info?</text>
+        <rect x="340" y="26" width="104" height="36" rx="6" style="fill: var(--accent-bg, #EBF7FD); stroke: var(--accent, #2D8ABF);" stroke-width="1.5"/>
+        <text x="392" y="48" text-anchor="middle" style="fill: var(--blue-0, #1E3A5F);" font-weight="600">Final answer</text>
+        <text x="150" y="322" style="fill: var(--text-dim, #9CA3AF);" font-size="10">The loop runs until the model can answer &#8212; or hits a step limit.</text>
+        <defs>
+          <marker id="d5reactArr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--text-dim, #9CA3AF)"/></marker>
+          <marker id="d5reactArrB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--accent-hover, #3BA3D4)"/></marker>
+          <marker id="d5reactArrC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" style="fill: var(--accent, #2D8ABF)"/></marker>
+        </defs>
+      </svg>
+      <p class="visual-diagram__caption">
+        The ReAct loop. Each cycle produces a thought, an action against a
+        tool, and an observation of the result, which feeds the next thought.
+        The dashed exit runs whenever the model judges it has enough &#8212;
+        and the step limit is the safeguard for when it never does.
+      </p>
+    </div>
+
     <h3>The Three Components</h3>
     <p>
       Building a ReAct agent requires three pieces, each with different

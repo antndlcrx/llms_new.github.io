@@ -27,15 +27,19 @@ const { problems } = Astro.props;
 
   <div class="problem-set__body">
 
+    {/* Cards 2+ ship hidden so the pre-JS render is already a single card,
+        never a stacked list; without JS, the noscript style restores access. */}
+    <noscript><style>{`.problem-card { display: block !important; } .problem-set__nav, .problem-set__pills { display: none !important; }`}</style></noscript>
+
     <div class="problem-set__pills" role="tablist" aria-label="Problems">
       {problems.map((p, i) => (
-        <button class="problem-set__pill" data-goto={i} data-tag={p.tag} role="tab" aria-label={`Problem ${i + 1}, ${p.tag}`}>{i + 1}</button>
+        <button class={i === 0 ? 'problem-set__pill is-active' : 'problem-set__pill'} data-goto={i} data-tag={p.tag} role="tab" aria-label={`Problem ${i + 1}, ${p.tag}`}>{i + 1}</button>
       ))}
     </div>
 
     <div class="problem-set__stage">
       {problems.map((p, i) => (
-        <article class="problem-card" data-tag={p.tag} data-index={i}>
+        <article class="problem-card" data-tag={p.tag} data-index={i} style={i === 0 ? undefined : 'display:none'}>
           <header class="problem-card__head">
             <span class="problem-card__num">Problem {i + 1}<span class="problem-card__of"> / {problems.length}</span></span>
             <span class="problem-tag" data-tag={p.tag}>{p.tag}</span>

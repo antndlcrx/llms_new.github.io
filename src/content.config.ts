@@ -43,13 +43,21 @@ const modules = defineCollection({
   }),
 });
 
-/** One record per track: identity, ordering, and the theme token that re-tints the page. */
+/**
+ * One record per track: identity, ordering, and its colour tokens.
+ * Two composing systems (themes.css): `palette` picks the brand pair
+ * (data-palette — the current system); `theme` picks the legacy ramp
+ * (data-theme — surfaces/text via --blue-*).
+ */
 const tracks = defineCollection({
   loader: glob({ pattern: '*.yaml', base: './src/content/tracks' }),
   schema: z.object({
     title: z.string(),
     blurb: z.string(),
-    theme: z.enum(['default', 'purple', 'red', 'green', 'mono']),
+    theme: z.enum(['default', 'purple', 'red', 'green', 'mono']).default('default'),
+    palette: z
+      .enum(['default', 'cherry-cyan', 'pink-lagune', 'electric-coral', 'crimson-blush', 'goldenrod-violet', 'sky-tangerine'])
+      .default('default'),
     order: z.number(),
     prerequisiteTracks: z.array(z.string()).default([]),
   }),

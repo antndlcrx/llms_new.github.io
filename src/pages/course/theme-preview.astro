@@ -11,13 +11,22 @@ import Base from '../../layouts/Base.astro';
     <div class="course-content">
 
       <div class="theme-switcher" id="theme-switcher">
-        <span class="theme-switcher__label">Theme</span>
-        <button data-t="default" data-pair="F2 · Royal Blue × Spring Green" class="is-active">Blue Lagoon</button>
-        <button data-t="green" data-pair="F8 · Forest × Hot Pink">Canopy</button>
-        <button data-t="purple" data-pair="F3 · Plum × Mint">Fusion</button>
-        <button data-t="red" data-pair="F5 · Burgundy × Aqua">Ember</button>
-        <button data-t="mono" data-pair="05 · Ink × Mint">Graphite</button>
-        <span id="theme-pair" style="flex-basis:100%; font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:0.06em;">Pair: F2 · Royal Blue × Spring Green — <span style="display:inline-block; width:120px; height:10px; border-radius:3px; vertical-align:middle; background:var(--grad-pair);"></span></span>
+        <span class="theme-switcher__label">Palette (pair)</span>
+        <button data-p="default" class="is-active">Royal × Spring Green</button>
+        <button data-p="pink-lagune">Hot Pink × Lagune</button>
+        <button data-p="electric-coral">Electric Blue × Coral</button>
+        <button data-p="cherry-cyan">Cherry × Cyan</button>
+        <button data-p="crimson-blush">Crimson × Blush</button>
+        <button data-p="goldenrod-violet">Goldenrod × Violet</button>
+        <button data-p="sky-tangerine">Sky × Tangerine</button>
+        <span style="flex-basis:100%; height:0;"></span>
+        <span class="theme-switcher__label">Ramp (legacy)</span>
+        <button data-t="default" class="is-active">Lagoon</button>
+        <button data-t="green">Green</button>
+        <button data-t="purple">Purple</button>
+        <button data-t="red">Red</button>
+        <button data-t="mono">Mono</button>
+        <span id="theme-pair" style="flex-basis:100%; font-family:var(--font-mono); font-size:10px; color:var(--text-muted); letter-spacing:0.06em;">Current pair — <span style="display:inline-block; width:120px; height:10px; border-radius:3px; vertical-align:middle; background:var(--grad-pair);"></span></span>
       </div>
 
       <header class="course-header">
@@ -121,14 +130,15 @@ import Base from '../../layouts/Base.astro';
       var sw = document.getElementById('theme-switcher');
       if (!sw) return;
       sw.addEventListener('click', function (e) {
-        var b = e.target.closest('button[data-t]');
+        var b = e.target.closest('button[data-t], button[data-p]');
         if (!b) return;
-        var t = b.getAttribute('data-t');
-        if (t === 'default') document.documentElement.removeAttribute('data-theme');
-        else document.documentElement.setAttribute('data-theme', t);
-        sw.querySelectorAll('button').forEach(function (x) { x.classList.toggle('is-active', x === b); });
-        var pair = document.getElementById('theme-pair');
-        if (pair) pair.firstChild.textContent = 'Pair: ' + b.getAttribute('data-pair') + ' — ';
+        var isPalette = b.hasAttribute('data-p');
+        var attr = isPalette ? 'data-palette' : 'data-theme';
+        var val = b.getAttribute(isPalette ? 'data-p' : 'data-t');
+        if (val === 'default') document.documentElement.removeAttribute(attr);
+        else document.documentElement.setAttribute(attr, val);
+        var group = isPalette ? 'button[data-p]' : 'button[data-t]';
+        sw.querySelectorAll(group).forEach(function (x) { x.classList.toggle('is-active', x === b); });
       });
     })();
   </script>

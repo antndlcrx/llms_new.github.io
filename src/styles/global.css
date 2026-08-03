@@ -75,119 +75,14 @@
 
 
 /* ============================================================
-   THEME VARIANTS (data-theme on <html>)
-   Uses same structure as base, but remaps the blue ramp,
-   background, surface, card, border and text tokens.
-   Base (no data-theme) = Blue Lagoon.
+   Theme ramps (data-theme) and brand pairs (data-palette) live
+   in themes.css — the design-system file — loaded after this
+   one by Base.astro. Bridge below: themes.css §4 styles
+   .btn-link, but site markup uses .btn-link-v3.
    ============================================================ */
 
-:root[data-theme="purple"] {
-  /* Blue spectrum remapped to Fusion ramp */
-  --blue-0: #2D1B4E;
-  --blue-1: #4A2272;
-  --blue-2: #6B2FA0;
-  --blue-3: #8B3CBF;
-  --blue-4: #A94ED4;
-  --blue-5: #C46AE6;
-  --blue-6: #D88AF0;
-  --blue-7: #E6A8F5;
-  --blue-8: #F0C8F9;
-  --blue-9: #F8E4FD;
-
-  --bg:        #FDFAFF;
-  --surface:   #F6F0FA;
-  --card:      #FFFFFF;
-  --elevated:  #FFFFFF;
-
-  --border:    #EAE0F0;
-  --border-lt: #DDCFE8;
-
-  --text:       #12091A;
-  --text-sec:   #3D2E4A;
-  --text-muted: #6E5F7A;
-  --text-dim:   #A094AA;
-}
-
-:root[data-theme="red"] {
-  /* Blue spectrum remapped to Ember ramp */
-  --blue-0: #5C1A1A;
-  --blue-1: #7A2424;
-  --blue-2: #9A3030;
-  --blue-3: #B84040;
-  --blue-4: #D45A3B;
-  --blue-5: #E67840;
-  --blue-6: #F09555;
-  --blue-7: #F5B478;
-  --blue-8: #FAD4A8;
-  --blue-9: #FDF0E0;
-
-  --bg:        #FDFBFA;
-  --surface:   #FAF4F0;
-  --card:      #FFFFFF;
-  --elevated:  #FFFFFF;
-
-  --border:    #F0E4DA;
-  --border-lt: #E6D6C8;
-
-  --text:       #1A0F0A;
-  --text-sec:   #4A3828;
-  --text-muted: #7A6858;
-  --text-dim:   #A89888;
-}
-
-:root[data-theme="green"] {
-  /* Blue spectrum remapped to Canopy ramp */
-  --blue-0: #1A3A2A;
-  --blue-1: #225540;
-  --blue-2: #2A7055;
-  --blue-3: #358A68;
-  --blue-4: #42A47E;
-  --blue-5: #58BC96;
-  --blue-6: #78D4B0;
-  --blue-7: #9CE6C8;
-  --blue-8: #B3ECD4;
-  --blue-9: #D4F6E8;
-
-  --bg:        #FAFDFB;
-  --surface:   #F0F8F4;
-  --card:      #FFFFFF;
-  --elevated:  #FFFFFF;
-
-  --border:    #DCF0E4;
-  --border-lt: #CEE5D8;
-
-  --text:       #0A1510;
-  --text-sec:   #2E453A;
-  --text-muted: #5A7568;
-  --text-dim:   #90A89A;
-}
-
-:root[data-theme="mono"] {
-  /* Blue spectrum remapped to Graphite ramp */
-  --blue-0: #1A1A1E;
-  --blue-1: #2A2A30;
-  --blue-2: #3A3A42;
-  --blue-3: #505058;
-  --blue-4: #686870;
-  --blue-5: #848490;
-  --blue-6: #A0A0AA;
-  --blue-7: #B8B8C0;
-  --blue-8: #C8C8D0;
-  --blue-9: #E2E2E8;
-
-  --bg:        #FAFAFB;
-  --surface:   #F0F0F2;
-  --card:      #FFFFFF;
-  --elevated:  #FFFFFF;
-
-  --border:    #E0E0E4;
-  --border-lt: #D2D2D8;
-
-  --text:       #0F0F12;
-  --text-sec:   #3A3A42;
-  --text-muted: #6A6A74;
-  --text-dim:   #9A9AA4;
-}
+.btn-link-v3 { color: var(--c-b-deep) !important; }
+.btn-link-v3:hover { color: var(--c-b) !important; }
 
 
 /* --- RESET --- */

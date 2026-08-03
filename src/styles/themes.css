@@ -1,0 +1,265 @@
+/* ================================================================
+   Oxford LLMs — PALETTES & COLOUR THEMES
+   Standalone reference sheet. Every colour token that affects
+   about.html, in one file, with no @imports.
+
+   Two independent switching systems are in play on the site:
+
+     1. data-palette  on <html>  → the brand PAIR (7 options)
+        Drives --c-a / --c-b and every gradient built from them.
+        Set by site.js (nav theme picker), persisted to
+        localStorage key "oxllm-palette".
+
+     2. data-theme    on <html>  → the legacy 10-stop RAMP (4 options)
+        Remaps --blue-0…9 plus surfaces and text.
+        Older system; still present because site.css references
+        --blue-* in places.
+
+   They compose: data-palette wins for brand moments (buttons,
+   logo, accent bars); data-theme still governs surfaces/text/
+   anything reading --blue-*.
+
+   Usage locally:
+     <html data-palette="pink-lagune" data-theme="green">
+     <link rel="stylesheet" href="themes.css">
+   ================================================================ */
+
+
+/* ================================================================
+   1 · BASE TOKENS
+   Surfaces, borders, text, spacing, radii, fonts, containers.
+   ================================================================ */
+:root {
+  /* ── Blue spectrum (default "Lagoon" ramp) ────────────────── */
+  --blue-0: #1E3A5F;
+  --blue-1: #1E5A8A;
+  --blue-2: #2272A8;
+  --blue-3: #2D8ABF;   /* legacy accent */
+  --blue-4: #3BA3D4;
+  --blue-5: #4FBCE6;
+  --blue-6: #6BD1F0;
+  --blue-7: #8DE0F5;
+  --blue-8: #B0ECF9;
+  --blue-9: #D5F5FD;
+
+  /* ── Surfaces ─────────────────────────────────────────────── */
+  --bg:        #FAFBFD;   /* page — off-white, 1° cool tint */
+  --surface:   #F2F4F8;   /* tinted section bands */
+  --card:      #FFFFFF;
+  --elevated:  #FFFFFF;
+
+  /* ── Borders ──────────────────────────────────────────────── */
+  --border:    #E2E6EE;   /* hairline on cards + dividers */
+  --border-lt: #EAEEF4;   /* hover-lightened border */
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --text:       #0F1117;  /* headlines, body emphasis */
+  --text-sec:   #3D4455;  /* body copy */
+  --text-muted: #6B7280;  /* supporting text, nav links */
+  --text-dim:   #9CA3AF;  /* labels, captions, copyright */
+
+  /* ── Legacy accent shortcuts (still read by parts of site.css) */
+  --accent-hover:  var(--blue-4);
+  --accent-dark:   var(--blue-1);
+  --accent-light:  var(--blue-7);
+  --accent-bg:     #EBF7FD;
+
+  /* ── Spacing · 8px scale ──────────────────────────────────── */
+  --sp-1: 4px;  --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px;  --sp-7: 32px;  --sp-8: 40px;
+  --sp-9: 48px; --sp-10: 64px;
+
+  /* ── Radii ────────────────────────────────────────────────── */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── Fonts ────────────────────────────────────────────────── */
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Container widths ─────────────────────────────────────── */
+  --max-w-content: 780px;
+  --max-w-page:    960px;
+  --max-w-wide:    1100px;
+}
+
+
+/* ================================================================
+   2 · BRAND PAIR — the current palette system
+   ----------------------------------------------------------------
+   Colour A is the primary: chrome, buttons, identity, logo.
+   Colour B has a defined, reserved role: "live / happening right
+   now" signals + secondary action links. B is never a primary
+   action surface or chrome colour.
+
+   Each pair ships a -deep variant for text-on-white legibility.
+   --c-mid is the near-white the pair gradient fades through.
+   ================================================================ */
+
+/* ── DEFAULT · Royal × Spring Green ───────────── formula winner ── */
+:root {
+  --c-a:      #1E45A0;
+  --c-a-deep: #11307A;
+  --c-b:      #4ADE80;
+  --c-b-deep: #2DA85A;
+  --c-mid:    #FCFCFC;
+
+  /* Signature gradients built from the pair */
+  --grad-pair:       linear-gradient(in oklch 90deg, var(--c-a) 15%, var(--c-mid) 50%, var(--c-b) 85%);
+  --grad-pair-soft:  linear-gradient(in oklch 90deg, var(--c-a)  5%, var(--c-mid) 50%, var(--c-b) 95%);
+  --grad-a-tonal:    linear-gradient(in oklch 135deg, var(--c-a-deep), var(--c-a));
+  --grad-b-tonal:    linear-gradient(in oklch 135deg, var(--c-b-deep), var(--c-b));
+
+  /* Bridges — site.css's older "spectrum" rules read these, so
+     pointing them at the pair makes every accent bar carry the
+     current brand pair automatically. */
+  --grad-spectrum: var(--grad-pair);
+  --grad-primary:  var(--grad-a-tonal);
+  --accent:        var(--c-a);
+}
+
+/* ── The six alternates in the live cycler ───────────────────────
+   Only pairs explicitly deemed best in the palette-candidates
+   iterations are here. Order matches the nav picker.
+   ─────────────────────────────────────────────────────────────── */
+
+/* Cherry × Cyan — formula winner */
+:root[data-palette="cherry-cyan"] {
+  --c-a: #D6243A; --c-a-deep: #9F1A2C;
+  --c-b: #3DC8DC; --c-b-deep: #1F9AAB;
+}
+
+/* Hot Pink × Lagune — ★ working best */
+:root[data-palette="pink-lagune"] {
+  --c-a: #E25890; --c-a-deep: #B02E68;
+  --c-b: #5DCEE4; --c-b-deep: #2A95AE;
+}
+
+/* Electric Blue × Coral — ★ working best */
+:root[data-palette="electric-coral"] {
+  --c-a: #1D4FE8; --c-a-deep: #112F9B;
+  --c-b: #FF6E55; --c-b-deep: #C04A35;
+}
+
+/* Crimson × Blush — ★ pinned */
+:root[data-palette="crimson-blush"] {
+  --c-a: #D62828; --c-a-deep: #9F1C1C;
+  --c-b: #F4B0C5; --c-b-deep: #C97F95;
+}
+
+/* Goldenrod × Violet — ★ pinned */
+:root[data-palette="goldenrod-violet"] {
+  --c-a: #C99818; --c-a-deep: #8C6A0D;
+  --c-b: #8C5DD8; --c-b-deep: #5E36A8;
+}
+
+/* Sky × Tangerine — ★ pinned */
+:root[data-palette="sky-tangerine"] {
+  --c-a: #F58A4A; --c-a-deep: #C1612A;
+  --c-b: #82CEE5; --c-b-deep: #3F8FAE;
+}
+
+
+/* ================================================================
+   3 · LEGACY RAMP THEMES — data-theme
+   ----------------------------------------------------------------
+   The older single-hue system. Each remaps the full 10-stop ramp
+   plus surfaces, borders and text. Layout never changes; only the
+   colour wheel rotates. Kept because parts of site.css still read
+   --blue-*. Omit data-theme entirely for the default Lagoon blue.
+   ================================================================ */
+
+/* Fusion — purple */
+:root[data-theme="purple"] {
+  --blue-0:#2D1B4E; --blue-1:#4A2272; --blue-2:#6B2FA0; --blue-3:#8B3CBF;
+  --blue-4:#A94ED4; --blue-5:#C46AE6; --blue-6:#D88AF0; --blue-7:#E6A8F5;
+  --blue-8:#F0C8F9; --blue-9:#F8E4FD;
+  --bg:#FDFAFF; --surface:#F6F0FA; --border:#EAE0F0; --border-lt:#DDCFE8;
+  --text:#12091A; --text-sec:#3D2E4A; --text-muted:#6E5F7A; --text-dim:#A094AA;
+}
+
+/* Ember — red / warm */
+:root[data-theme="red"] {
+  --blue-0:#5C1A1A; --blue-1:#7A2424; --blue-2:#9A3030; --blue-3:#B84040;
+  --blue-4:#D45A3B; --blue-5:#E67840; --blue-6:#F09555; --blue-7:#F5B478;
+  --blue-8:#FAD4A8; --blue-9:#FDF0E0;
+  --bg:#FDFBFA; --surface:#FAF4F0; --border:#F0E4DA; --border-lt:#E6D6C8;
+  --text:#1A0F0A; --text-sec:#4A3828; --text-muted:#7A6858; --text-dim:#A89888;
+}
+
+/* Canopy — green */
+:root[data-theme="green"] {
+  --blue-0:#1A3A2A; --blue-1:#225540; --blue-2:#2A7055; --blue-3:#358A68;
+  --blue-4:#42A47E; --blue-5:#58BC96; --blue-6:#78D4B0; --blue-7:#9CE6C8;
+  --blue-8:#B3ECD4; --blue-9:#D4F6E8;
+  --bg:#FAFDFB; --surface:#F0F8F4; --border:#DCF0E4; --border-lt:#CEE5D8;
+  --text:#0A1510; --text-sec:#2E453A; --text-muted:#5A7568; --text-dim:#90A89A;
+}
+
+/* Graphite — near-mono */
+:root[data-theme="mono"] {
+  --blue-0:#1A1A1E; --blue-1:#2A2A30; --blue-2:#3A3A42; --blue-3:#505058;
+  --blue-4:#686870; --blue-5:#848490; --blue-6:#A0A0AA; --blue-7:#B8B8C0;
+  --blue-8:#C8C8D0; --blue-9:#E2E2E8;
+  --bg:#FAFAFB; --surface:#F0F0F2; --border:#E0E0E4; --border-lt:#D2D2D8;
+  --text:#0F0F12; --text-sec:#3A3A42; --text-muted:#6A6A74; --text-dim:#9A9AA4;
+}
+
+
+/* ================================================================
+   4 · WHERE COLOUR B IS ALLOWED TO APPEAR
+   ----------------------------------------------------------------
+   B's whole job is "live / happening right now" + secondary
+   actions. These are the only rules that spend it. Copied here so
+   the file is a complete picture of the colour system.
+   ================================================================ */
+
+/* Pulsing live dot in the status strip */
+.status-dot {
+  background: var(--c-b) !important;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-b) 50%, transparent) !important;
+  animation-name: status-pulse-b !important;
+}
+@keyframes status-pulse-b {
+  0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-b) 50%, transparent); }
+  60%     { box-shadow: 0 0 0 8px color-mix(in srgb, var(--c-b) 0%, transparent); }
+}
+
+/* Inline "live" indicator in the apply teaser */
+.apply-teaser .at-row .live { color: var(--c-b-deep) !important; }
+.apply-teaser .at-row .live::before {
+  background: var(--c-b) !important;
+  animation-name: status-pulse-b !important;
+}
+
+/* Secondary action link — B-deep for legibility on white,
+   brightening to B on hover. */
+.btn-link { color: var(--c-b-deep) !important; }
+.btn-link:hover { color: var(--c-b) !important; }
+
+/* Aurora blobs behind the hero use the pair + neutral centre */
+.hero-aurora .b1 { background: radial-gradient(circle, var(--c-a), transparent 65%); }
+.hero-aurora .b2 { background: radial-gradient(circle, var(--c-b), transparent 65%); }
+.hero-aurora .b3 { background: radial-gradient(circle, var(--c-mid), transparent 65%); }
+
+/* Hero title accent — deliberately an in-family tonal of A, not
+   the pair gradient: gradient text needs visible colour at every
+   position, and a white midpoint makes the word vanish. */
+.hero-title .word.accent,
+.hero-title .accent {
+  background: var(--grad-a-tonal);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+
+/* Nav palette-picker swatch */
+.themebtn .sw-pair { display: inline-flex; gap: 2px; vertical-align: middle; }
+.themebtn .sw-pair i {
+  display: block; width: 11px; height: 11px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+}

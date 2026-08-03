@@ -1,0 +1,8 @@
+title: LLMs for Social Science
+blurb: >-
+  The core course. From how text becomes data, through the transformer and
+  post-training, to fine-tuning, validation, and autonomous research agents —
+  fifteen modules in five parts.
+theme: default
+order: 4
+prerequisiteTracks: []

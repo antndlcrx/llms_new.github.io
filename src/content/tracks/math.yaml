@@ -1,0 +1,8 @@
+title: Mathematical Foundations
+blurb: >-
+  The linear algebra, calculus, probability, and information theory the rest of
+  the curriculum stands on — taught geometrically, with every idea landing on a
+  question about language models.
+theme: green
+order: 1
+prerequisiteTracks: []

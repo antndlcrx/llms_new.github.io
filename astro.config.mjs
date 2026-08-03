@@ -1,7 +1,9 @@
 import { defineConfig } from 'astro/config';
+import mdx from '@astrojs/mdx';
 
 // https://astro.build/config
 export default defineConfig({
+  integrations: [mdx()],
   // For GitHub Pages with a custom domain (llmsforsocialscience.net):
   site: 'https://llmsforsocialscience.net',
 

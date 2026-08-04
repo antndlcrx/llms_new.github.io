@@ -1,0 +1,430 @@
+---
+/**
+ * descent-landscape (M6) — gradient descent on a loss surface, watched.
+ * A 3D drag-to-orbit surface (orthographic projection adapted from
+ * dimension-stepper) with a 2D contour inset: pick a surface (non-convex
+ * wells / convex bowl / ravine), click the inset to place a start point,
+ * set the learning rate on a log slider, and Run/Step/Reset the descent.
+ * Presets reproduce the recognisable signatures: convergence, oscillation,
+ * divergence, saddle stalling, and a ravine where momentum visibly helps.
+ * Analytic gradients, hand-rolled rendering, no libraries.
+ * All element ids are dsl-prefixed (never a heading slug).
+ */
+---
+
+<div class="widget-wrap" id="descent-landscape">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">The Descent Landscape</p>
+  <p class="widget-intro">
+    Loss as height, parameters as position. Choose a surface and a learning rate, place a
+    start point on the map, and press Run. The learning rate's failure modes — crawl,
+    zigzag, explosion — look different from each other, and once you have watched each one
+    here you will recognise them in a real loss curve.
+  </p>
+
+  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;" role="group" aria-label="Surface">
+    <span style="font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:var(--text-muted); align-self:center;">Surface</span>
+    <button class="dsl-btn dsl-surf" data-s="wells">Two wells</button>
+    <button class="dsl-btn dsl-surf" data-s="bowl">Convex bowl</button>
+    <button class="dsl-btn dsl-surf" data-s="ravine">Ravine</button>
+    <span style="flex-basis:100%; height:0;"></span>
+    <span style="font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.14em; color:var(--text-muted); align-self:center;">Presets</span>
+    <button class="dsl-btn dsl-preset" data-p="converge">Converge</button>
+    <button class="dsl-btn dsl-preset" data-p="oscillate">Oscillate</button>
+    <button class="dsl-btn dsl-preset" data-p="diverge">Diverge</button>
+    <button class="dsl-btn dsl-preset" data-p="saddle">Saddle stall</button>
+    <button class="dsl-btn dsl-preset" data-p="ravine-mom">Ravine + momentum</button>
+  </div>
+
+  <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-bottom:12px; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455);">
+    <label style="display:flex; align-items:center; gap:8px;">learning rate
+      <input type="range" id="dsl-lr" min="-2.3" max="0.2" step="0.01" value="-1.3" aria-label="Learning rate, log scale" style="width:130px;">
+      <span id="dsl-lrval" style="min-width:52px; display:inline-block;">0.050</span>
+    </label>
+    <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="dsl-mom" aria-label="Momentum"> momentum
+    </label>
+    <button class="dsl-btn" id="dsl-run">Run</button>
+    <button class="dsl-btn" id="dsl-step">Step</button>
+    <button class="dsl-btn" id="dsl-reset">Reset</button>
+  </div>
+
+  <div class="visual-diagram" style="margin:0 0 4px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
+      <canvas id="dsl-canvas" width="460" height="360" style="max-width:100%; touch-action:none;" tabindex="0" aria-label="3D loss surface with descent trajectory. Drag or use arrow keys to orbit."></canvas>
+      <canvas id="dsl-map" width="150" height="150" style="border:1px solid var(--border); border-radius:6px; cursor:crosshair;" aria-label="Contour map. Click to place the start point."></canvas>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family:var(--font-mono); padding:6px 0 2px;">
+    <span style="font-size:13px; color:var(--text-sec, #3D4455);">loss&nbsp;=&nbsp;<span id="dsl-loss" style="font-weight:700; color:var(--text, #0F1117);">–</span></span>
+    <span style="font-size:12px; color:var(--text-muted, #6B7280);">step&nbsp;<span id="dsl-steps">0</span></span>
+    <span id="dsl-verdict" style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted, #6B7280);">ready</span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">
+    <strong>Drag the surface to orbit it.</strong> The map on the right shows the same surface
+    from above — darker bands are lower ground; click anywhere on it to start the descent
+    there. On the ravine, run the same learning rate with and without momentum and watch the
+    zigzag straighten out.
+  </p>
+</div>
+
+<style is:global>
+  .dsl-btn {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-sec, #3D4455);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .dsl-btn:hover { border-color: var(--accent, #2D8ABF); color: var(--accent, #2D8ABF); }
+  .dsl-btn.is-active { border-color: var(--accent, #2D8ABF); color: var(--accent, #2D8ABF); }
+</style>
+
+<script is:inline>
+(function() {
+  var canvas = document.getElementById("dsl-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var map = document.getElementById("dsl-map");
+  var mctx = map.getContext("2d");
+  var lrSlider = document.getElementById("dsl-lr");
+  var lrVal = document.getElementById("dsl-lrval");
+  var momBox = document.getElementById("dsl-mom");
+  var outLoss = document.getElementById("dsl-loss");
+  var outSteps = document.getElementById("dsl-steps");
+  var verdict = document.getElementById("dsl-verdict");
+  var runBtn = document.getElementById("dsl-run");
+  var stepBtn = document.getElementById("dsl-step");
+  var resetBtn = document.getElementById("dsl-reset");
+  var surfBtns = Array.prototype.slice.call(document.querySelectorAll("#descent-landscape .dsl-surf"));
+  var presetBtns = Array.prototype.slice.call(document.querySelectorAll("#descent-landscape .dsl-preset"));
+
+  var W = 460, H = 360, CX = 230, CY = 175;
+  var MW = 150;
+  var R = 2; // domain [-R, R]^2
+
+  // ── Surfaces: value + analytic gradient ──
+  var surfaces = {
+    wells: { // two unequal basins with a saddle between them
+      f: function(x, y) { return (x * x - 1) * (x * x - 1) + 0.3 * x + 0.5 * y * y; },
+      g: function(x, y) { return [4 * x * (x * x - 1) + 0.3, y]; },
+      zScale: 24, zMax: 6
+    },
+    bowl: { // convex, mildly anisotropic
+      f: function(x, y) { return 0.5 * (x * x + 2 * y * y); },
+      g: function(x, y) { return [x, 2 * y]; },
+      zScale: 22, zMax: 6
+    },
+    ravine: { // strong anisotropy: curvature 1 along x, 15 along y
+      f: function(x, y) { return 0.5 * (x * x + 15 * y * y); },
+      g: function(x, y) { return [x, 15 * y]; },
+      zScale: 5, zMax: 32
+    }
+  };
+
+  var state = {
+    surf: "wells",
+    theta: [1.6, 1.4],
+    start: [1.6, 1.4],
+    vel: [0, 0],
+    path: [],
+    losses: [],
+    flips: [],
+    prevStep: null,
+    steps: 0,
+    running: null,
+    yaw: -0.65,
+    pitch: 0.5
+  };
+
+  function lr() { return Math.pow(10, parseFloat(lrSlider.value)); }
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+  function hexToRgb(h) {
+    h = h.replace("#", "");
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function mix(c1, c2, t) {
+    return "rgb(" + Math.round(c1[0] + (c2[0] - c1[0]) * t) + "," + Math.round(c1[1] + (c2[1] - c1[1]) * t) + "," + Math.round(c1[2] + (c2[2] - c1[2]) * t) + ")";
+  }
+
+  function proj3(x, z, y) {
+    // world: x right, y up (height), z depth — matches dimension-stepper
+    var cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+    var cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    var X = cy * x + sy * z;
+    var Z = -sy * x + cy * z;
+    var Y = cp * y - sp * Z;
+    var Z2 = sp * y + cp * Z;
+    return { x: CX + 78 * X, y: CY - 78 * Y, d: Z2 };
+  }
+
+  function surfPoint(x, y) {
+    var s = surfaces[state.surf];
+    var z = Math.min(s.f(x, y), s.zMax);
+    return proj3(x, y, z * (1.9 / s.zMax) - 0.55); // normalise height into view
+  }
+
+  function drawSurface() {
+    var accent = hexToRgb(cssVar("--accent", "#2D8ABF").replace(/[^#0-9A-Fa-f]/g, "") || "2D8ABF");
+    var lowC = hexToRgb("#1E3A5F");
+    try { lowC = hexToRgb(cssVar("--accent-dark", "#1E5A8A")); } catch (e) {}
+    var hiC = [244, 246, 249];
+    var s = surfaces[state.surf];
+
+    ctx.clearRect(0, 0, W, H);
+    var N = 22;
+    var quads = [];
+    for (var i = 0; i < N; i++) {
+      for (var j = 0; j < N; j++) {
+        var x0 = -R + (2 * R * i) / N, x1 = -R + (2 * R * (i + 1)) / N;
+        var y0 = -R + (2 * R * j) / N, y1 = -R + (2 * R * (j + 1)) / N;
+        var p = [surfPoint(x0, y0), surfPoint(x1, y0), surfPoint(x1, y1), surfPoint(x0, y1)];
+        var zmid = Math.min(s.f((x0 + x1) / 2, (y0 + y1) / 2), s.zMax) / s.zMax;
+        quads.push({ p: p, d: (p[0].d + p[2].d) / 2, t: zmid });
+      }
+    }
+    quads.sort(function(a, b) { return a.d - b.d; }); // far first
+    quads.forEach(function(q) {
+      ctx.beginPath();
+      ctx.moveTo(q.p[0].x, q.p[0].y);
+      for (var k = 1; k < 4; k++) ctx.lineTo(q.p[k].x, q.p[k].y);
+      ctx.closePath();
+      ctx.fillStyle = mix(lowC, hiC, Math.pow(q.t, 0.7));
+      ctx.globalAlpha = 0.92; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.strokeStyle = "rgba(120,135,155,0.25)"; ctx.lineWidth = 0.5; ctx.stroke();
+    });
+
+    // trajectory
+    if (state.path.length > 0) {
+      var acc = cssVar("--c-b-deep", "#2DA85A");
+      ctx.strokeStyle = acc; ctx.lineWidth = 2;
+      ctx.beginPath();
+      state.path.forEach(function(pt, k) {
+        var pp = surfPoint(Math.max(-R, Math.min(R, pt[0])), Math.max(-R, Math.min(R, pt[1])));
+        if (k === 0) ctx.moveTo(pp.x, pp.y); else ctx.lineTo(pp.x, pp.y);
+      });
+      ctx.stroke();
+      state.path.forEach(function(pt, k) {
+        var pp = surfPoint(Math.max(-R, Math.min(R, pt[0])), Math.max(-R, Math.min(R, pt[1])));
+        ctx.fillStyle = acc;
+        ctx.beginPath(); ctx.arc(pp.x, pp.y, k === state.path.length - 1 ? 5 : 2.2, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+  }
+
+  function drawMap() {
+    var s = surfaces[state.surf];
+    var img = mctx.createImageData(MW, MW);
+    var lowC = hexToRgb(cssVar("--accent-dark", "#1E5A8A"));
+    var hiC = [246, 248, 251];
+    for (var py = 0; py < MW; py++) {
+      for (var px = 0; px < MW; px++) {
+        var x = -R + (2 * R * px) / MW;
+        var y = R - (2 * R * py) / MW;
+        var t = Math.min(s.f(x, y), s.zMax) / s.zMax;
+        var band = Math.floor(Math.pow(t, 0.7) * 9) / 9; // banded = contour feel
+        var idx = (py * MW + px) * 4;
+        img.data[idx] = lowC[0] + (hiC[0] - lowC[0]) * band;
+        img.data[idx + 1] = lowC[1] + (hiC[1] - lowC[1]) * band;
+        img.data[idx + 2] = lowC[2] + (hiC[2] - lowC[2]) * band;
+        img.data[idx + 3] = 255;
+      }
+    }
+    mctx.putImageData(img, 0, 0);
+    // trajectory on map
+    var acc = cssVar("--c-b-deep", "#2DA85A");
+    mctx.strokeStyle = acc; mctx.lineWidth = 1.5;
+    mctx.beginPath();
+    state.path.forEach(function(pt, k) {
+      var px = ((pt[0] + R) / (2 * R)) * MW;
+      var py = ((R - pt[1]) / (2 * R)) * MW;
+      if (k === 0) mctx.moveTo(px, py); else mctx.lineTo(px, py);
+    });
+    mctx.stroke();
+    if (state.path.length) {
+      var last = state.path[state.path.length - 1];
+      mctx.fillStyle = acc;
+      mctx.beginPath();
+      mctx.arc(((last[0] + R) / (2 * R)) * MW, ((R - last[1]) / (2 * R)) * MW, 4, 0, Math.PI * 2);
+      mctx.fill();
+    }
+  }
+
+  function setVerdict() {
+    var n = state.losses.length;
+    var cur = state.losses[n - 1];
+    if (!isFinite(cur) || Math.abs(state.theta[0]) > 6 || Math.abs(state.theta[1]) > 6 || cur > 1e3) {
+      verdict.textContent = "diverged"; return;
+    }
+    if (n < 3) { verdict.textContent = "descending…"; return; }
+    var s = surfaces[state.surf];
+    var g = s.g(state.theta[0], state.theta[1]);
+    var gn = Math.hypot(g[0], g[1]);
+    var recent = state.losses.slice(-6);
+    var ups = 0;
+    for (var i = 1; i < recent.length; i++) if (recent[i] > recent[i - 1] + 1e-12) ups++;
+    // Oscillation = the step direction keeps reversing, whether or not the
+    // loss is monotone (overshoot shrinks y² every step yet zigzags in space).
+    var flips = 0;
+    var rf = state.flips.slice(-5);
+    for (var k = 0; k < rf.length; k++) if (rf[k]) flips++;
+    if (state.surf === "wells" && Math.abs(g[0]) < 0.03 && cur > 0.05 && Math.abs(state.theta[0]) < 0.5) { verdict.textContent = "stalled near the saddle"; return; }
+    // Settled state wins over the oscillation heuristic — momentum's loss is
+    // non-monotone even while it is landing.
+    if (gn < 1e-2) { verdict.textContent = "converged"; return; }
+    if (ups >= 2 || flips >= 3) { verdict.textContent = "oscillating"; return; }
+    verdict.textContent = "converging";
+  }
+
+  function stepOnce() {
+    var s = surfaces[state.surf];
+    var g = s.g(state.theta[0], state.theta[1]);
+    var eta = lr();
+    var before = [state.theta[0], state.theta[1]];
+    if (momBox.checked) {
+      state.vel[0] = 0.85 * state.vel[0] - eta * g[0];
+      state.vel[1] = 0.85 * state.vel[1] - eta * g[1];
+      state.theta[0] += state.vel[0];
+      state.theta[1] += state.vel[1];
+    } else {
+      state.theta[0] -= eta * g[0];
+      state.theta[1] -= eta * g[1];
+    }
+    state.steps++;
+    var stepVec = [state.theta[0] - before[0], state.theta[1] - before[1]];
+    if (state.prevStep) {
+      var dp = stepVec[0] * state.prevStep[0] + stepVec[1] * state.prevStep[1];
+      state.flips.push(dp < 0);
+      if (state.flips.length > 8) state.flips.shift();
+    }
+    state.prevStep = stepVec;
+    var L = s.f(state.theta[0], state.theta[1]);
+    state.path.push([state.theta[0], state.theta[1]]);
+    if (state.path.length > 400) state.path.shift();
+    state.losses.push(L);
+    outLoss.textContent = isFinite(L) ? (L > 999 ? L.toExponential(1) : L.toFixed(4)) : "∞";
+    outSteps.textContent = state.steps;
+    setVerdict();
+    drawSurface(); drawMap();
+    if (verdict.textContent === "diverged" || verdict.textContent === "converged") stopRun();
+  }
+
+  function stopRun() {
+    if (state.running) { clearInterval(state.running); state.running = null; runBtn.textContent = "Run"; }
+  }
+
+  function reset(keepStart) {
+    stopRun();
+    state.theta = [state.start[0], state.start[1]];
+    state.vel = [0, 0];
+    state.path = [[state.theta[0], state.theta[1]]];
+    state.losses = [];
+    state.flips = [];
+    state.prevStep = null;
+    state.steps = 0;
+    var L = surfaces[state.surf].f(state.theta[0], state.theta[1]);
+    outLoss.textContent = L.toFixed(4);
+    outSteps.textContent = "0";
+    verdict.textContent = "ready";
+    drawSurface(); drawMap();
+  }
+
+  function setSurf(name) {
+    state.surf = name;
+    surfBtns.forEach(function(b) { b.classList.toggle("is-active", b.getAttribute("data-s") === name); });
+    reset();
+  }
+  function setLr(v) {
+    lrSlider.value = String(Math.log10(v));
+    lrVal.textContent = v.toFixed(3);
+  }
+
+  surfBtns.forEach(function(b) { b.addEventListener("click", function() { setSurf(b.getAttribute("data-s")); }); });
+  lrSlider.addEventListener("input", function() { lrVal.textContent = lr().toFixed(3); });
+  momBox.addEventListener("change", function() { reset(); });
+
+  runBtn.addEventListener("click", function() {
+    if (state.running) { stopRun(); return; }
+    runBtn.textContent = "Pause";
+    state.running = setInterval(function() {
+      stepOnce();
+      if (state.steps > 400) stopRun();
+    }, 40);
+  });
+  stepBtn.addEventListener("click", function() { stopRun(); stepOnce(); });
+  resetBtn.addEventListener("click", function() { reset(); });
+
+  var presets = {
+    "converge":   { surf: "wells",  lr: 0.05,  start: [1.6, 1.4],  mom: false },
+    "oscillate":  { surf: "ravine", lr: 0.12,  start: [-1.8, 0.9], mom: false },
+    "diverge":    { surf: "ravine", lr: 0.15,  start: [-1.8, 0.6], mom: false },
+    "saddle":     { surf: "wells",  lr: 0.05,  start: [0.0754, 1.2], mom: false },
+    "ravine-mom": { surf: "ravine", lr: 0.12,  start: [-1.8, 0.9], mom: true }
+  };
+  presetBtns.forEach(function(b) {
+    b.addEventListener("click", function() {
+      var p = presets[b.getAttribute("data-p")];
+      momBox.checked = p.mom;
+      setLr(p.lr);
+      state.start = [p.start[0], p.start[1]];
+      setSurf(p.surf);
+      presetBtns.forEach(function(x) { x.classList.toggle("is-active", x === b); });
+    });
+  });
+
+  // click map to place start
+  map.addEventListener("click", function(e) {
+    var rect = map.getBoundingClientRect();
+    var x = -R + (2 * R * (e.clientX - rect.left)) / rect.width;
+    var y = R - (2 * R * (e.clientY - rect.top)) / rect.height;
+    state.start = [x, y];
+    reset();
+  });
+
+  // orbit
+  var dragging = false, lastX = 0, lastY = 0;
+  canvas.addEventListener("mousedown", function(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; e.preventDefault(); });
+  document.addEventListener("mousemove", function(e) {
+    if (!dragging) return;
+    state.yaw += (e.clientX - lastX) * 0.01;
+    state.pitch = Math.max(0.15, Math.min(1.3, state.pitch + (e.clientY - lastY) * 0.01));
+    lastX = e.clientX; lastY = e.clientY;
+    drawSurface();
+  });
+  document.addEventListener("mouseup", function() { dragging = false; });
+  canvas.addEventListener("touchstart", function(e) { dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("touchmove", function(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    state.yaw += (e.touches[0].clientX - lastX) * 0.01;
+    state.pitch = Math.max(0.15, Math.min(1.3, state.pitch + (e.touches[0].clientY - lastY) * 0.01));
+    lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+    drawSurface();
+  }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = false; });
+  canvas.addEventListener("keydown", function(e) {
+    var st = 0.08;
+    if (e.key === "ArrowLeft") state.yaw -= st;
+    else if (e.key === "ArrowRight") state.yaw += st;
+    else if (e.key === "ArrowUp") state.pitch = Math.min(1.3, state.pitch + st);
+    else if (e.key === "ArrowDown") state.pitch = Math.max(0.15, state.pitch - st);
+    else return;
+    e.preventDefault();
+    drawSurface();
+  });
+
+  setLr(0.05);
+  setSurf("wells");
+})();
+</script>

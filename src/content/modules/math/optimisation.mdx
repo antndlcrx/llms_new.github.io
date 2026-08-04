@@ -4,10 +4,424 @@ order: 6
 id: M6
 title: Optimisation
 description: "Training runs a greedy local procedure on a non-convex surface with no guarantee of optimality — and it works anyway."
-objectives: []
+objectives:
+  - Describe gradient descent and justify the negative sign.
+  - Predict the effect of a learning rate that is too small, too large, or well chosen.
+  - Explain what stochasticity buys and what it costs.
+  - Give the intuition for momentum and adaptive methods.
+  - Say why non-convexity removes the guarantees and why training works anyway.
 prerequisites: [math/derivatives]
-estimatedMinutes: 70
-status: planned
+seeAlso: []
+estimatedMinutes: 90
+status: draft
+widgets:
+  - descent-landscape
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import DescentLandscape from '../../../components/widgets/DescentLandscape.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  gdUpdate: String.raw`$$\boldsymbol{\theta} \;\leftarrow\; \boldsymbol{\theta} - \eta\, \nabla_{\boldsymbol{\theta}}\, \mathcal{L}(\boldsymbol{\theta})$$`,
+  gdUpdateCaption: String.raw`Gradient descent, the entire algorithm: from wherever you stand, compute the gradient — M5's direction of steepest <em>ascent</em> — and take a small step the opposite way. The learning rate $\eta$ sets the step size, and it is the subject of this module's widget.`,
+  gdDef: String.raw`The iterative procedure $\boldsymbol{\theta}_{t+1} = \boldsymbol{\theta}_t - \eta \nabla \mathcal{L}(\boldsymbol{\theta}_t)$: repeatedly step against the gradient until it vanishes. <em>Greedy</em> — each step uses only local slope, with no view of the wider landscape — and <em>local</em>: where it ends up depends on where it started.`,
+  quadStep: String.raw`$$f(x) = \tfrac{a}{2}x^2:\qquad x_{t+1} = x_t - \eta\, a x_t = (1 - \eta a)\, x_t$$`,
+  quadStepCaption: String.raw`Descent on the simplest possible loss is a multiplication: each step scales the error by $(1 - \eta a)$. The whole theory of learning rates is visible in this one factor — shrink, oscillate, or explode — and problem 2 extracts the threshold from it.`,
+  sgdUpdate: String.raw`$$\nabla \mathcal{L}(\boldsymbol{\theta}) = \frac{1}{N}\sum_{i=1}^{N} \nabla \ell_i(\boldsymbol{\theta}) \;\;\approx\;\; \frac{1}{|B|}\sum_{i \in B} \nabla \ell_i(\boldsymbol{\theta})$$`,
+  sgdUpdateCaption: String.raw`The full gradient is an average over every training example; a minibatch $B$ estimates it from a random sample. An unbiased estimate with sampling noise that shrinks like $1/\sqrt{|B|}$ — a survey statistic, in every sense you already know.`,
+  sgdDef: String.raw`Gradient descent in which each step uses a gradient estimated from a random <strong>minibatch</strong> of the data rather than the full dataset. Cheaper per step by a factor of $N/|B|$; noisier per step; and the noise turns out to be a feature as well as a cost.`,
+  momUpdate: String.raw`$$\mathbf{v} \leftarrow \beta\,\mathbf{v} - \eta\,\nabla\mathcal{L}(\boldsymbol{\theta}), \qquad \boldsymbol{\theta} \leftarrow \boldsymbol{\theta} + \mathbf{v}$$`,
+  momUpdateCaption: String.raw`Momentum: keep a running velocity $\mathbf{v}$ that accumulates gradients, decayed by $\beta$ (typically $0.9$). Consistent directions build speed; alternating directions cancel — which is exactly what a zigzagging trajectory needs.`,
+  convexDef: String.raw`A function $f$ is <strong>convex</strong> if the line segment between any two points of its graph lies on or above the graph: $f(\lambda \mathbf{u} + (1-\lambda)\mathbf{v}) \le \lambda f(\mathbf{u}) + (1-\lambda) f(\mathbf{v})$. For convex losses, every local minimum is global, and gradient descent with a sane learning rate provably converges to it. Squared-error linear regression and logistic regression are convex; neural networks are not.`,
+  rateApp: String.raw`For a convex quadratic with curvatures between $a_{\min}$ and $a_{\max}$, gradient descent with the best fixed learning rate contracts the error by a factor of roughly $\frac{\kappa - 1}{\kappa + 1}$ per step, where $\kappa = a_{\max}/a_{\min}$ is the <strong>condition number</strong>. Well-conditioned problems ($\kappa$ near 1) converge in a handful of steps; ill-conditioned ones — ravines — crawl. Problem 6 derives this, and it is the precise version of what the ravine preset shows.`,
+  schedApp: String.raw`<strong>Learning-rate schedules</strong> resolve the tension the widget exposes: large steps early (fast progress, coarse), small steps late (fine convergence). Warmup ramps $\eta$ up from near zero — large early gradients in poorly-initialised networks would otherwise cause immediate divergence — then decay (cosine, linear, step) brings it down. Every serious training run you meet in the LLMs track uses some form of this.`,
+  momApp: String.raw`Unrolling the momentum update: $\mathbf{v}_t = -\eta \sum_{s \le t} \beta^{\,t-s}\, \nabla\mathcal{L}_s$ — an exponentially-weighted average of past gradients with effective horizon $1/(1-\beta)$. Along a ravine's floor the gradients agree and the sum grows toward $\frac{\eta}{1-\beta}$ times the gradient (a $10\times$ effective learning rate at $\beta = 0.9$); across the ravine they alternate signs and cancel. <strong>Adam</strong> adds a second running average — of squared gradients — and divides by its root, giving each parameter its own effective learning rate: parameters with persistently large gradients get damped, quiet ones get amplified. The full update carries bias corrections for the averages' cold start. Adam is the default in deep learning because it is robust to the raw gradient scale — but "why exactly it generalises the way it does" remains genuinely unsettled, and the honest summary is: it works, it is well understood mechanically, and its interaction with generalisation is still being argued about in papers.`,
+  secondApp: String.raw`<strong>Second-order methods</strong> (Newton's method and relatives) use curvature — the Hessian from M5's appendix — to take far better-aimed steps, converging in dramatically fewer iterations. They are absent from deep learning at scale for an arithmetic reason: with $n$ parameters the Hessian has $n^2$ entries, and $n$ is in the billions. Storing, let alone inverting, a $10^9 \times 10^9$ matrix is not a candidate operation. Quasi-Newton and diagonal approximations (of which Adam is a distant, cheap relative) are the compromise that survived contact with scale.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Hand-execute three steps of gradient descent on $f(x) = 2x^2$ starting from $x_0 = 1$, twice: once with $\eta = 0.1$ and once with $\eta = 0.45$. Report the sequence of $x$ values for each. What is each run doing?</p>`,
+    solution: String.raw`<p>The gradient is $f'(x) = 4x$, so the update is $x \leftarrow x - 4\eta x = (1 - 4\eta)x$. With $\eta = 0.1$: factor $0.6$, giving $1 \to 0.6 \to 0.36 \to 0.216$ — smooth geometric convergence. With $\eta = 0.45$: factor $1 - 1.8 = -0.8$, giving $1 \to -0.8 \to 0.64 \to -0.512$ — the sign flips every step (overshooting the minimum each time) while the magnitude still shrinks: oscillating convergence. Same algorithm, same function; the learning rate alone changes the character of the trajectory.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>For descent on $f(x) = \tfrac{a}{2}x^2$ (gradient $ax$), find the exact learning-rate threshold beyond which the iteration diverges, and the rate at which oscillation first appears. Why does this explain the folk rule "sharper curvature demands a smaller learning rate"?</p>`,
+    solution: String.raw`<p>The update multiplies $x$ by $(1 - \eta a)$ each step, so the error evolves as $\lvert 1 - \eta a \rvert^{\,t}$. Convergence needs $\lvert 1 - \eta a \rvert < 1$, i.e. $0 < \eta < 2/a$; beyond $\eta = 2/a$ every step <em>grows</em> the error — divergence. Oscillation begins at $\eta = 1/a$, where the factor turns negative: still converging, but overshooting the minimum every step. Since the threshold is $2/a$, larger curvature $a$ buys a proportionally smaller safe range — curvature sets the ceiling, which is also why the ravine (curvature 15 across, 1 along) diverges across its walls at learning rates that are perfectly safe along its floor.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>A minibatch gradient is computed from 32 examples out of a million, yet the training run works. Why is a gradient estimated from a 0.003% sample trustworthy at all — and what, precisely, does increasing the batch size buy and cost?</p>`,
+    solution: String.raw`<p>The minibatch gradient is an unbiased estimator of the full gradient — the average of a random sample estimates the average of the population, the oldest fact in survey statistics — and its noise shrinks like $1/\sqrt{|B|}$. Descent does not need each step to be right; it needs steps to be right <em>on average</em>, and errors to cancel over many steps, which unbiasedness delivers. Increasing batch size buys lower noise per step (a straighter trajectory) and better hardware utilisation; it costs proportionally more computation per step, more memory (the S track quantifies this), and — past a point — diminishing returns, since noise shrinks with the square root while cost grows linearly. Quadrupling the batch halves the noise but quadruples the bill.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Gradient noise is credited with helping descent escape saddle points. Why can the same noise not rescue a run stuck in a deep, sharp minimum? Answer geometrically.</p>`,
+    solution: String.raw`<p>A saddle is an unstable equilibrium: the gradient vanishes there, but in at least one direction the surface curves <em>downward</em>, so any perturbation with a component along that direction is amplified — noise only has to nudge, and the deterministic dynamics do the rest. A deep sharp minimum is stable in every direction: all perturbations are pushed back toward the bottom, and escaping requires a jump whose size exceeds the basin's width — which random small kicks essentially never supply, and whose probability shrinks with the basin's depth. Noise tips over balanced pencils; it does not throw balls out of wells.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Momentum is standardly described as "a heavy ball rolling downhill." Name at least two places where the physical analogy breaks, and why they matter in practice.</p>`,
+    solution: String.raw`<p>First: a physical ball conserves energy — it would roll through the minimum, up the far side, and oscillate forever without friction. The optimiser's $\beta < 1$ is deliberate, aggressive friction with no physical counterpart tuned so trajectories settle. Second: a real ball's momentum lives in continuous time under forces; the optimiser takes discrete jumps, and with a large learning rate the "ball" can teleport across walls and out of basins entirely — behaviour no rolling object exhibits. Third (bonus): the ball's mass never changes, but the effective amplification $1/(1-\beta)$ interacts with the learning rate, so tuning one silently retunes the other. The analogy earns its keep for building intuition about ravines — accumulate along agreement, cancel across alternation — and misleads about stability, which is exactly where practitioners get burned.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Show that gradient descent on the quadratic $f(\mathbf{x}) = \tfrac{1}{2}(a_1 x_1^2 + a_2 x_2^2)$ with $0 < a_1 \le a_2$ converges linearly, and find the best fixed learning rate and the resulting rate in terms of the condition number $\kappa = a_2 / a_1$.</p>`,
+    solution: String.raw`<p>The coordinates decouple: $x_i \leftarrow (1 - \eta a_i) x_i$, so after $t$ steps $x_i(t) = (1 - \eta a_i)^t x_i(0)$ — linear (geometric) convergence, governed by $\rho(\eta) = \max_i \lvert 1 - \eta a_i \rvert$. The best fixed $\eta$ balances the two extremes: set $\lvert 1 - \eta a_1 \rvert = \lvert 1 - \eta a_2 \rvert$ with opposite signs, giving $\eta^* = \tfrac{2}{a_1 + a_2}$ and $\rho^* = \tfrac{a_2 - a_1}{a_2 + a_1} = \tfrac{\kappa - 1}{\kappa + 1}$. At $\kappa = 1$ (a round bowl), $\rho^* = 0$: one step to the bottom. At $\kappa = 15$ (the widget's ravine), $\rho^* = 0.875$: dozens of steps per digit of accuracy, error halving only every five steps. Ill-conditioning is not an inconvenience — it is <em>the</em> obstacle, and the reason the ravine preset zigzags is that no single learning rate suits both curvatures at once.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    When you fit a regression, the estimates arrive in one step — a closed-form formula (M3's
+    projection, in fact) computes them exactly, and the question "did we find the best
+    coefficients?" has a provable yes. Neural networks offer no such formula. There is no
+    equation to solve for the best transformer; there is only a loss surface and a procedure
+    that walks downhill on it, one small step at a time, with no guarantee about where it
+    ends up. This module is about that procedure — gradient descent — and about the honest,
+    slightly uncomfortable fact that underwrites the entire field: <em>a greedy local walk
+    with no optimality guarantee is what trains every model in this curriculum, and it works
+    anyway.</em>
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Describe gradient descent and justify the negative sign.</li>
+      <li>Predict the effect of a learning rate that is too small, too large, or well chosen.</li>
+      <li>Explain what stochasticity buys and what it costs.</li>
+      <li>Give the intuition for momentum and adaptive methods.</li>
+      <li>Say why non-convexity removes the guarantees and why training works anyway.</li>
+    </ol>
+  </div>
+</section>
+
+## Loss Surfaces
+
+Start with the object the whole module lives on. A model's parameters are numbers — M1
+taught you to see a list of numbers as a <em>point</em>. So every possible setting of a
+model's parameters is a point in parameter space, and attaching to each point the loss that
+those parameters achieve turns the space into a <em>landscape</em>: parameters as
+coordinates, loss as height. Training is finding low ground.
+
+For a two-parameter model you can draw this — height over a plane — and this module's widget
+does. A regression's squared-error surface is a smooth bowl with one bottom. A neural
+network's surface is nothing of the kind: ridges, multiple valleys of different depths,
+plateaus, and — the shape that will matter most — <strong>saddle points</strong>, where the
+ground is flat but curves down in one direction and up in another.
+
+One warning, posted early and deliberately: <strong>the 2D picture is a crutch with a stated
+expiry.</strong> Real models have millions to billions of parameters, and M1's lesson about
+high dimensions applies with force — geometry you cannot picture behaves unlike geometry you
+can. The most consequential difference: in high dimensions, critical points where the ground
+is flat are overwhelmingly saddles, not minima (a flat point must curve <em>up</em> in every
+one of a million directions to be a minimum, and that unanimity is rare). Use the picture;
+do not trust it past its expiry.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Parameters are coordinates, loss is height, training is descending the landscape.
+    Regression's landscape is a bowl with a formula for its bottom; a network's landscape has
+    no formula, many valleys, and — in high dimensions — flat points that are almost always
+    saddles rather than minima.
+  </p>
+</div>
+
+## Gradient Descent
+
+M5 built the tool this module runs on: the gradient, the direction of steepest ascent, with
+its length measuring the slope. Standing anywhere on the loss surface, you therefore know
+exactly one useful local fact — which way is most sharply <em>up</em>. The algorithm writes
+itself:
+
+<div class="formula-block">
+  <Tex tex={math.gdUpdate} />
+  <Tex class="formula-block__caption" tex={math.gdUpdateCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Gradient Descent</p>
+  <Tex tex={math.gdDef} />
+</div>
+
+Three properties deserve to be stated plainly. The negative sign is there because the
+gradient points uphill and we want down — that is the entire justification. The procedure is
+<em>greedy</em>: each step consults only the slope underfoot, never the map; nothing prevents
+it from marching into a shallow valley while a deeper one sits a ridge away. And it
+<em>terminates</em> where the gradient vanishes — which, by M5's definition, includes minima,
+maxima (unreachable going downhill), plateaus, and saddles alike. "The gradient is zero" and
+"we found the best parameters" are different claims, and conflating them is the misconception
+this module exists to retire.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    Gradient descent stops when the gradient hits zero. Your training loss has just stopped
+    improving. List three geometrically distinct situations on the landscape that all produce
+    this same symptom — and note which ones you would want to escape from.
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        (1) A genuine minimum — the desirable stop, though possibly a shallow local one with
+        a better valley elsewhere. (2) A saddle — flat underfoot, but the surface still falls
+        away in some direction the current step cannot find; worth escaping, and noise turns
+        out to help. (3) A plateau — a wide, nearly-flat shelf where the gradient is tiny
+        without being meaningfully zero; the walk continues, imperceptibly. From the loss
+        curve alone the three are indistinguishable, which is why the deep-learning track
+        spends a whole module (D5) on reading training diagnostics beyond the single number.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Step against the gradient, scaled by the learning rate; repeat. Greedy (slope underfoot,
+    no map), local (destination depends on start), and it stops wherever the gradient
+    vanishes — which is not the same claim as having found the best parameters.
+  </p>
+</div>
+
+## The Learning Rate
+
+One knob controls the character of everything the previous section described. Watch it work
+before theorising about it:
+
+<DescentLandscape />
+
+The behaviours you can produce with that slider are the module's core practical content, and
+each has a recognisable signature. <strong>Too small</strong>: every step is safe and
+correct, and the run crawls — correct but slow, the least dangerous failure.
+<strong>Too large</strong>: each step overshoots the low ground it aimed for, landing on the
+far wall; the trajectory zigzags, and past a sharp threshold each overshoot lands
+<em>higher</em> than it started and the loss explodes — divergence. <strong>Well
+chosen</strong>: a band, not a point — fast progress that settles cleanly. The simplest loss
+makes all of this exact:
+
+<div class="formula-block">
+  <Tex tex={math.quadStep} />
+  <Tex class="formula-block__caption" tex={math.quadStepCaption} />
+</div>
+
+Read the factor: for $\eta$ below $1/a$ it shrinks the error smoothly; between $1/a$ and
+$2/a$ it is negative — overshooting every step, oscillating — but still shrinking; past $2/a$
+its magnitude exceeds one and every step amplifies. <strong>Curvature sets the ceiling:</strong>
+the sharper the valley (larger $a$), the smaller the survivable learning rate. That is why
+the ravine surface — gentle curvature along the floor, brutal curvature across it — is the
+hard case: no single step size suits both directions, so the safe rate for the walls wastes
+the floor, and a rate that moves along the floor explodes against the walls. Run the
+Oscillate and Diverge presets and watch the same surface produce both behaviours from a 25%
+change in one number.
+
+The honest summary for practice: the learning rate is the single most consequential
+hyperparameter in deep learning, its safe range is set by the sharpest curvature anywhere on
+the path, and its failure modes are <em>visible</em> — a lesson the deep-learning track's
+training-dynamics module (D5) turns into a diagnostic skill for real loss curves.
+
+<details class="appendix-box">
+  <summary>Appendix · convergence rate, and learning-rate schedules</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.rateApp} />
+    <Tex tex={math.schedApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Too small crawls; too large zigzags, then — past the threshold set by curvature —
+    explodes; well-chosen is a band. Curvature sets the ceiling, ravines make one rate serve
+    two curvatures badly, and every failure mode has a visible signature worth learning to
+    recognise.
+  </p>
+</div>
+
+## Stochastic Gradient Descent
+
+The loss surface training actually descends is an average over the whole dataset — and
+computing the true gradient means running every one of possibly millions of examples through
+the model for every single step. Unaffordable. The fix is the oldest idea in your
+discipline: <em>sample</em>.
+
+<div class="formula-block">
+  <Tex tex={math.sgdUpdate} />
+  <Tex class="formula-block__caption" tex={math.sgdUpdateCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Stochastic Gradient Descent</p>
+  <Tex tex={math.sgdDef} />
+</div>
+
+A minibatch is a survey sample of the dataset, and everything you know about survey samples
+transfers: the estimate is unbiased, its noise shrinks with the square root of the sample
+size, and a shockingly small sample is enough when you only need to be right on average.
+Descent tolerates per-step error unusually well, because thousands of steps give the errors
+room to cancel — the trajectory wobbles around the true descent path rather than departing
+from it.
+
+And the noise is not merely tolerated — <strong>it is put to work</strong>. A saddle stalls
+exact gradient descent: the gradient underfoot is zero, and a deterministic walker with no
+gradient stands still. A stochastic walker never has exactly zero gradient — each minibatch
+disagrees slightly — and any nudge with a component along the saddle's downhill direction
+gets amplified by the geometry itself. Noise tips the walker off the balance point. The
+batch-size dial is therefore a genuine trade: larger batches buy straighter trajectories and
+better hardware efficiency at proportionally more compute and memory per step (the systems
+track prices this exactly), while smaller batches are cheap, noisy, and — within reason —
+usefully noisy.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    The minibatch gradient is a survey estimate of the true gradient — unbiased, noise
+    shrinking with the root of the batch size. Descent only needs to be right on average, and
+    the noise even helps, tipping the walk off saddles that would stall an exact method.
+  </p>
+</div>
+
+## Momentum and Adam
+
+Two refinements run nearly every real training job, and both are intuitions you can now own
+in one paragraph each — derivations live in the appendix.
+
+<strong>Momentum</strong> treats the trajectory like a heavy ball rather than a drunken walk:
+
+<div class="formula-block">
+  <Tex tex={math.momUpdate} />
+  <Tex class="formula-block__caption" tex={math.momUpdateCaption} />
+</div>
+
+The velocity accumulates gradients over time. Where successive gradients agree — along a
+ravine's floor — they compound, and the ball accelerates. Where they alternate — across the
+ravine's walls — they cancel, and the zigzag damps itself out. Run the ravine preset with
+and without the momentum toggle: the same learning rate that oscillates painfully without it
+glides with it. (The heavy-ball analogy is genuinely useful and breaks in instructive
+places — problem 5 makes you find them.)
+
+<strong>Adam</strong>, the default optimiser of modern deep learning, adds one more idea:
+give <em>every parameter its own effective learning rate</em>, scaled down where gradients
+run persistently large and up where they run small — a per-coordinate answer to the ravine
+problem, which is after all the situation where different directions demand different step
+sizes. Stated plainly, as the spec for this module requires: Adam is the default because it
+is robust — it works acceptably across a wide range of problems without tuning — and its
+mechanics are fully understood while its interaction with generalisation is genuinely not.
+"Everyone uses it and the theory is catching up" is the honest status.
+
+<details class="appendix-box">
+  <summary>Appendix · momentum and Adam, derived; second-order methods</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.momApp} />
+    <Tex tex={math.secondApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Momentum accumulates agreeing gradients and cancels alternating ones — built for ravines.
+    Adam gives each parameter its own effective learning rate and is the robust default,
+    mechanically well understood and theoretically still argued about. Both are refinements
+    of, not replacements for, the same downhill walk.
+  </p>
+</div>
+
+## Convex, Non-Convex, and Why It Works Anyway
+
+Here is what the guarantees you gave up were worth, and the honest state of why losing them
+turned out to be survivable.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Convex Function</p>
+  <Tex tex={math.convexDef} />
+</div>
+
+Convexity is the property that makes optimisation a solved problem: one basin, every local
+minimum global, provable convergence at known rates. The classical statistical toolkit lives
+almost entirely inside it — which is why "the regression found <em>the</em> estimates" is a
+sentence your training permits. Toggle the widget between the convex bowl and the two-well
+surface and the difference is visible: on the bowl, every start point and any sane learning
+rate reach the same bottom; on the wells, the destination depends on where you start, and
+one of the two valleys is simply better than the other.
+
+Neural network losses are emphatically non-convex — composition of nonlinear layers
+guarantees it — so on paper, training should be hostage to its starting point, prone to bad
+valleys, and unprovable. In practice it works, robustly, at every scale the field has
+reached. The current understanding of why, stated with the confidence it deserves — which is
+partial: <strong>overparameterisation</strong> means modern networks have vastly more
+parameters than strictly needed, and with that surplus the landscape appears to grow many
+minima of near-equal quality, so which valley you land in matters less;
+<strong>the bad critical points are mostly saddles</strong> in high dimensions, and
+stochastic noise escapes saddles; and empirically, <strong>the minima found this way
+generalise</strong> — with the relationship between the landscape's geometry and
+generalisation an active research area, not a settled story. This is an honest "partly
+empirical": the field can describe what happens far better than it can prove why. That
+modelling of uncertainty is worth more to a researcher than a tidy false confidence.
+
+Where this lands: training a transformer — the process the LLMs track budgets, the systems
+track prices, and the deep-learning track instruments — is exactly this module's procedure,
+scaled up: minibatch gradients through M5's chain rule, an Adam step, a learning-rate
+schedule, repeated a few hundred thousand times. The single most useful artefact it produces
+along the way is the <strong>loss curve</strong> — and you now possess the vocabulary it is
+written in: crawls, zigzags, explosions, plateaus, and honest descents.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Convexity would buy provable, start-independent convergence; networks do not have it.
+    Training works anyway — overparameterisation, saddle-escaping noise, many good-enough
+    minima — and the full "why" is genuinely open. The loss curve is the instrument, and this
+    module taught you to read its handwriting.
+  </p>
+</div>
+
+## Problem Set
+
+The module's real assessment: six problems, easy to hard, on paper first. Problem 2's
+threshold is the single most transferable number — it is why divergence looks the way it
+does everywhere.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    Parameters are coordinates and loss is height; training descends the resulting landscape
+    with the only local fact available — the gradient — negated, scaled by the learning rate,
+    and repeated. The procedure is greedy and local, and it stops wherever the gradient
+    vanishes, which is not the same as finding the best parameters. The learning rate is the
+    one knob: too small crawls, too large oscillates and then diverges past a threshold set
+    by curvature, and ravines — mismatched curvatures — make any single rate a compromise.
+    Minibatches turn the exact gradient into a survey estimate: unbiased, root-of-batch-size
+    noise, cheap — and the noise pays for itself by tipping the walk off saddles. Momentum
+    accumulates agreement and cancels zigzag; Adam gives each parameter its own step size and
+    is the honest, imperfectly-understood default. Convexity would have guaranteed
+    everything; networks are not convex, and training works anyway for reasons —
+    overparameterisation, saddle-dominance, many good minima — that are partly established
+    and partly open. Every training run in this curriculum is this module executed at scale,
+    and its loss curve speaks a language of crawls, zigzags, and explosions you can now read.
+    The debt planted in M5 — "what does the learning rate control?" — is paid; the next
+    debts fall due in D5, where these signatures appear in real training runs.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em>, ch. 7</a>: continuous optimisation at textbook depth, free online.</li>
+    <li><a href="https://www.deeplearningbook.org/contents/optimization.html" target="_blank" rel="noopener">Goodfellow, Bengio &amp; Courville, <em>Deep Learning</em>, ch. 8</a>: optimisation for deep models specifically — the non-convex reality this module summarises.</li>
+    <li><a href="https://arxiv.org/abs/1609.04747" target="_blank" rel="noopener">Ruder (2016), <em>An overview of gradient descent optimization algorithms</em></a>: the standard tour from SGD through momentum to Adam and beyond.</li>
+    <li><a href="https://web.stanford.edu/~boyd/cvxbook/" target="_blank" rel="noopener">Boyd &amp; Vandenberghe, <em>Convex Optimization</em>, ch. 9</a>: what provable convergence looks like when convexity holds — appendix-level, and the standard reference.</li>
+  </ul>
+</section>

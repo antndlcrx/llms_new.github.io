@@ -3,11 +3,417 @@ track: math
 order: 4
 id: M4
 title: Eigenvectors, SVD, and Low Rank
-description: "Every matrix is a sum of rank-1 pieces ordered by importance — the module where LoRA becomes inevitable rather than clever."
-objectives: []
+description: "Every matrix is a sum of rank-1 pieces ordered by importance — the module where low-rank adaptation becomes inevitable rather than clever."
+objectives:
+  - Say what an eigenvector is geometrically.
+  - Read the SVD as a sum of rank-1 terms ordered by importance.
+  - Explain what truncating to rank r keeps and what it discards.
+  - Count parameters for a full versus a low-rank matrix.
+  - Explain PCA as the SVD of centred data, and name a failure mode.
 prerequisites: [math/matrices, math/projection]
-estimatedMinutes: 90
-status: planned
+seeAlso: []
+estimatedMinutes: 95
+status: draft
+widgets:
+  - rank-slider
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import RankSlider from '../../../components/widgets/RankSlider.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  eigenDef: String.raw`A nonzero vector $\mathbf{v}$ with $A\mathbf{v} = \lambda\mathbf{v}$ for some scalar $\lambda$ (the <strong>eigenvalue</strong>): a direction the matrix does not rotate, only stretches — by factor $\lambda$, with negative $\lambda$ meaning a flip along the same line.`,
+  eigenEq: String.raw`$$A\mathbf{v} = \lambda \mathbf{v}$$`,
+  eigenEqCaption: String.raw`The whole definition: input direction and output direction agree. Along an eigenvector, a matrix behaves like plain multiplication by a number — the simplest thing a matrix can possibly do.`,
+  symFact: String.raw`$$A = A^\top \;\;\Longrightarrow\;\; A = Q \Lambda Q^\top$$`,
+  symFactCaption: String.raw`The spectral theorem, stated: a symmetric matrix has a full set of <em>orthogonal</em> eigenvectors (the columns of $Q$) with real eigenvalues (the diagonal of $\Lambda$). Read right to left: rotate into the eigenvector basis, scale each axis, rotate back — M2's promise that "symmetric is a scale along rotated axes" is now a theorem.`,
+  svdEq: String.raw`$$A = U \Sigma V^\top \qquad\Longleftrightarrow\qquad A = \sum_{i=1}^{\operatorname{rank}(A)} \sigma_i\, \mathbf{u}_i \mathbf{v}_i^\top$$`,
+  svdEqCaption: String.raw`The singular value decomposition, in both notations. The right-hand form is the one to internalise: a sum of rank-1 pieces $\mathbf{u}_i\mathbf{v}_i^\top$, each weighted by a singular value $\sigma_i \geq 0$, always sorted largest first. $U$ and $V$ are orthogonal — M2's safe rotations — and $\Sigma$ is diagonal: <em>every</em> matrix is rotate · scale · rotate.`,
+  rankOne: String.raw`A matrix of the form $\mathbf{u}\mathbf{v}^\top$: every row is a multiple of $\mathbf{v}^\top$, every column a multiple of $\mathbf{u}$. It maps all of space onto the single line through $\mathbf{u}$ — the M2 Collapse preset was one. It stores $m + n$ numbers' worth of structure, not $mn$.`,
+  truncEq: String.raw`$$A_r = \sum_{i=1}^{r} \sigma_i\, \mathbf{u}_i \mathbf{v}_i^\top \qquad\quad \lVert A - A_r \rVert_F = \sqrt{\textstyle\sum_{i > r} \sigma_i^2}$$`,
+  truncEqCaption: String.raw`Truncation: keep the $r$ most important pieces. The error is exactly the energy of the discarded singular values — and by the Eckart–Young theorem (appendix), no rank-$r$ matrix of <em>any</em> construction does better. Truncated SVD is not a heuristic; it is the optimum.`,
+  paramCount: String.raw`$$\underbrace{d \times d}_{\text{full}} = 4096^2 = 16{,}777{,}216 \qquad \underbrace{r(2d)}_{\text{rank } r} = 8 \times 2 \times 4096 = 65{,}536 \qquad \frac{16{,}777{,}216}{65{,}536} = 256$$`,
+  paramCountCaption: String.raw`Computed, not asserted: storing a rank-8 version of a $4096 \times 4096$ matrix as two thin factors costs 256 times fewer parameters than the full matrix. This single division is most of the economics of parameter-efficient fine-tuning.`,
+  pcaEq: String.raw`$$X_c = X - \bar{X} \qquad X_c = U\Sigma V^\top \qquad \text{PC}_i = \mathbf{v}_i,\quad \text{explained variance} \propto \sigma_i^2$$`,
+  pcaEqCaption: String.raw`PCA is the SVD of centred data: centre the rows (M1's centering, now load-bearing), decompose, and the right singular vectors are the principal components — the directions along which the data cloud spreads most — with $\sigma_i^2$ measuring how much spread each direction explains.`,
+  loraEq: String.raw`$$W' = W + \Delta W \approx W + BA, \qquad B \in \mathbb{R}^{d \times r},\; A \in \mathbb{R}^{r \times d},\; r \ll d$$`,
+  loraEqCaption: String.raw`Low-rank adaptation: freeze the pretrained $W$, learn only a rank-$r$ update written as two thin matrices. The bet is not that $W$ is low-rank — it usually is not — but that the <em>change</em> a fine-tuning task demands is. L10 uses this picture at production altitude.`,
+  spectralApp: String.raw`<strong>Spectral theorem, sketch.</strong> For symmetric $A$: eigenvalues are real because $\mathbf{v}^\top A \mathbf{v}$ is real for the (possibly complex) eigenpair, forcing $\lambda = \bar\lambda$; eigenvectors of distinct eigenvalues are orthogonal because $\lambda_1 \mathbf{v}_1 \cdot \mathbf{v}_2 = (A\mathbf{v}_1)\cdot\mathbf{v}_2 = \mathbf{v}_1 \cdot (A\mathbf{v}_2) = \lambda_2 \mathbf{v}_1 \cdot \mathbf{v}_2$ (symmetry supplies the middle step), so $(\lambda_1 - \lambda_2)\,\mathbf{v}_1\cdot\mathbf{v}_2 = 0$. Completeness (a full orthonormal set exists, including repeated eigenvalues) takes an induction on deflated subspaces.`,
+  eigSvdApp: String.raw`<strong>Eigendecomposition vs SVD.</strong> They coincide only for symmetric positive semi-definite matrices, where $A = Q\Lambda Q^\top$ <em>is</em> the SVD ($U = V = Q$, $\Sigma = \Lambda$). In general: the SVD of $A$ is the eigendecomposition of $A^\top A$ (giving $V$ and $\sigma_i^2$) and of $AA^\top$ (giving $U$). Eigenvectors need a square matrix and may not exist over the reals; singular vectors exist for <em>every</em> matrix — which is why the SVD, not the eigendecomposition, is the workhorse.`,
+  eyApp: String.raw`<strong>Eckart–Young, proof shape (Frobenius norm).</strong> Because the Frobenius norm is invariant under the orthogonal maps $U$ and $V$ (they preserve lengths, M2), transform to the diagonal frame: the problem becomes "approximate $\Sigma$ by a rank-$r$ matrix", and for a diagonal target the best you can do is keep the $r$ largest diagonal entries — any rank-$r$ competitor must miss at least the energy $\sum_{i>r}\sigma_i^2$, which a dimension-counting argument on null spaces makes precise. Equality holds for the truncated SVD, so it is optimal. (Mirsky extended the result to every orthogonally invariant norm, spectral norm included.)`,
+  condApp: String.raw`<strong>Condition number.</strong> $\kappa(A) = \sigma_{\max}/\sigma_{\min}$: the ratio between the most- and least-amplified directions. Large $\kappa$ means some directions of the input barely register in the output, so inverting the map amplifies noise catastrophically — the numerical reason regressions with collinear predictors return absurd coefficients (the design matrix has tiny $\sigma_{\min}$), and the honest cousin of the singularity-as-information-destruction story from M2.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Find the eigenvalues and eigenvectors of (a)&nbsp;$\begin{bmatrix} 3 & 0 \\ 0 & 2 \end{bmatrix}$, (b)&nbsp;$\begin{bmatrix} 3 & 1 \\ 0 & 2 \end{bmatrix}$, and (c)&nbsp;$\begin{bmatrix} 0 & -1 \\ 1 & 0 \end{bmatrix}$ — one of these has none over the reals; say which, and say what that means geometrically.</p>`,
+    solution: String.raw`<p>(a)&nbsp;Diagonal: the axes themselves. $\lambda = 3$ with $\mathbf{v} = (1,0)$; $\lambda = 2$ with $\mathbf{v} = (0,1)$. (b)&nbsp;Triangular: eigenvalues sit on the diagonal, $\lambda = 3$ with $(1, 0)$, and $\lambda = 2$ with $(1, -1)$ — check: $(3 - 1, -2) = (2, -2) = 2(1,-1)$. (c)&nbsp;The $90°$ rotation from M2's stop-and-think: $\lambda^2 + 1 = 0$ has no real roots, so <em>no</em> real eigenvectors — geometrically obvious once said aloud: a rotation leaves no direction unturned. Not every matrix has eigenvectors; every matrix has singular vectors, which is why the SVD is the general tool.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>A matrix has singular values $\sigma = (10, 6, 3, 1)$. What fraction of its Frobenius norm is retained by the rank-2 truncation? And what is the exact relative error $\lVert A - A_2 \rVert_F / \lVert A \rVert_F$?</p>`,
+    solution: String.raw`<p>Retained energy: $\sqrt{100 + 36} = \sqrt{136} \approx 11.66$ of $\sqrt{100+36+9+1} = \sqrt{146} \approx 12.08$ — about $96.5\%$ of the norm. The error is the discarded energy: $\sqrt{9 + 1}/\sqrt{146} = \sqrt{10}/\sqrt{146} \approx 0.26$, i.e. $26\%$ relative error — note both numbers are computed from the spectrum alone, no reconstruction needed, exactly as the widget does it.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>For $d = 1024$: how many parameters does a full $d \times d$ matrix store, and how many does a rank-16 factorisation $BA$ store? At what rank $r$ does the low-rank form stop saving parameters?</p>`,
+    solution: String.raw`<p>Full: $1024^2 = 1{,}048{,}576$. Rank-16: $2 \times 1024 \times 16 = 32{,}768$ — a $32\times$ saving. Break-even: $2dr \geq d^2$ when $r \geq d/2 = 512$. Below half the dimension the factorisation saves; the interesting empirical fact is how absurdly far below that threshold useful values of $r$ sit — 4, 8, 16 — which is a statement about the world, not about algebra.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>The SVD can be written $U\Sigma V^\top$ or $\sum_i \sigma_i \mathbf{u}_i \mathbf{v}_i^\top$. Argue that the second form is the better one to think in. What does each factor of the first form hide?</p>`,
+    solution: String.raw`<p>The sum form makes three things visible that the product form buries: (1) the matrix is an <em>accumulation of parts</em>, each a rank-1 atom you fully understand (all of space onto one line); (2) the parts are <em>ordered by importance</em> — $\sigma_1$ first — so "keep the top $r$" is a natural operation rather than a trick; (3) truncation error is legible: drop terms, and the error is exactly the dropped $\sigma$s. The product form hides all of this inside three opaque factors — it is the right form for <em>computing</em>, the wrong form for <em>thinking</em>. The widget's slider is the sum form made physical.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>You run PCA on document embeddings and find the top principal component separates your corpus beautifully. A colleague warns that the top PC of embedding spaces is often word frequency, not meaning. How would you check, and what would you do if the warning is right?</p>`,
+    solution: String.raw`<p>Check: correlate each document's PC1 score with a frequency proxy — document length, mean token log-frequency — and look at the extreme documents by eye; if PC1 is frequency, the extremes will be long/common-word documents versus short/rare-word ones regardless of topic. If confirmed: do not interpret PC1 as content; either remove it (project the embeddings onto the complement — M3's machinery, and the standard "all-but-the-top" post-processing trick) or normalise away the frequency signal before decomposing. The general lesson is the module's measurement-validity refrain: an unsupervised axis is not labelled, and the largest direction of variance in your data is whatever <em>varies most</em>, not whatever you care about.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>LoRA assumes the fine-tuning <em>update</em> $\Delta W$ is low-rank — not the weight matrix $W$ itself. Why is that a much weaker, and therefore more plausible, assumption?</p>`,
+    solution: String.raw`<p>$W$ encodes everything the pretrained model knows through that layer — the accumulated structure of a trillion tokens — and empirically its spectrum decays slowly: it genuinely uses its dimensions. The <em>update</em> only has to encode what the new task changes: a domain's vocabulary emphasis, a task's output format, a style. That is a small, structured correction — a few new directions of behaviour, not a rewiring — and "few directions" is precisely "low rank". The claim is also testable: fine-tune fully, compute $\Delta W = W' - W$, and look at its spectrum; the observed fast decay is the empirical bedrock under the method (Hu et al., §4.1 — this week's reading).</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Prove the Eckart–Young theorem for the Frobenius norm: among all matrices $B$ of rank at most $r$, the truncated SVD $A_r$ minimises $\lVert A - B \rVert_F$.</p>`,
+    solution: String.raw`<p>Since $\lVert \cdot \rVert_F$ is invariant under orthogonal multiplication, write $A = U\Sigma V^\top$ and put any competitor $B$ into the same frame: $\lVert A - B \rVert_F = \lVert \Sigma - C \rVert_F$ with $C = U^\top B V$ of rank at most $r$. Lower bound: because $\operatorname{rank}(C) \leq r$, its null space has dimension at least $n - r$, so it intersects the span of the first $r{+}1$ coordinate axes in some unit vector $\mathbf{w}$; then $\lVert \Sigma - C \rVert_F^2 \geq \lVert (\Sigma - C)\mathbf{w} \rVert^2 = \lVert \Sigma \mathbf{w} \rVert^2 \geq \sigma_{r+1}^2$. Iterating the argument on deflated subspaces (or invoking Weyl's inequalities for the cleaner route) accumulates the full bound $\lVert \Sigma - C \rVert_F^2 \geq \sum_{i>r} \sigma_i^2$. The truncated SVD achieves exactly this — its error is $\sum_{i>r}\sigma_i^2$ — so it is optimal. Equality analysis shows the optimum is unique when $\sigma_r > \sigma_{r+1}$.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    M2 ended with a plane crushed onto a line and a promise that the crushing would become
+    quantitative. This module keeps that promise — and inverts it. The question is no longer
+    "did the matrix destroy dimensions?" but "how much of this matrix actually
+    <em>matters</em>?" The answer, for nearly every matrix that describes anything structured —
+    images, survey data, learned weights — is: far less than its size suggests. That single
+    empirical fact, made precise by the singular value decomposition, is why a
+    thousand-question survey measures three attitudes, why embeddings can be compressed and
+    visualised, and why you can fine-tune a multi-billion-parameter model on one GPU.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Say what an eigenvector is geometrically.</li>
+      <li>Read the SVD as a sum of rank-1 terms ordered by importance.</li>
+      <li>Explain what truncating to rank <em>r</em> keeps and what it discards.</li>
+      <li>Count parameters for a full versus a low-rank matrix.</li>
+      <li>Explain PCA as the SVD of centred data, and name a failure mode.</li>
+    </ol>
+  </div>
+</section>
+
+## Directions a Matrix Only Stretches
+
+Go back to the M2 canvas for a moment. Under most matrices, most vectors <em>rotate</em>:
+they come out pointing somewhere new. But watch closely and some matrices have special
+directions that refuse to turn — vectors that come out longer or shorter or flipped, but
+still on their own line. Try it: set the M2 widget to the Scale preset, and notice the two
+axes pass through unrotated while every diagonal direction swings.
+
+Those unturning directions are the <strong>eigenvectors</strong>, and the stretch factors
+are the <strong>eigenvalues</strong>:
+
+<div class="formula-block">
+  <Tex tex={math.eigenEq} />
+  <Tex class="formula-block__caption" tex={math.eigenEqCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Eigenvector, Eigenvalue</p>
+  <Tex tex={math.eigenDef} />
+</div>
+
+Why care about the directions a matrix treats simply? Because along them, a complicated
+transformation reduces to multiplication by a number — and if you can find enough of them
+to form a basis, the <em>whole</em> matrix reduces to numbers along special axes. That is
+the decomposition programme this module runs on: take an opaque matrix apart into rotations
+(which you understand) and per-axis scalings (which you understand), with nothing left over.
+
+One honest caution before the programme succeeds: it does not always work with eigenvectors
+alone. A rotation matrix turns <em>every</em> direction — no real eigenvectors at all
+(problem 1 makes you meet this). The general tool needs one more idea, and it arrives in
+section three.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    An eigenvector is a direction a matrix does not rotate — only stretches, by its
+    eigenvalue. Along eigenvectors a matrix acts like plain multiplication, which is why
+    finding them is the first step of taking a matrix apart.
+  </p>
+</div>
+
+## The Symmetric Special Case
+
+For one family of matrices, the programme works perfectly — and it happens to be the family
+your data already lives in. A <strong>symmetric</strong> matrix (equal to its own transpose)
+always has a complete set of eigenvectors, they are mutually <em>orthogonal</em>, and every
+eigenvalue is real:
+
+<div class="formula-block">
+  <Tex tex={math.symFact} />
+  <Tex class="formula-block__caption" tex={math.symFactCaption} />
+</div>
+
+M2 promised that a symmetric matrix is "a pure scale along some rotated set of axes"; the
+spectral theorem is that promise with a proof (sketched in the appendix). Rotate into the
+right frame — the orthogonal eigenvectors — and the matrix is diagonal: nothing but
+independent per-axis stretches. All the complexity was in <em>which axes</em>.
+
+And symmetric matrices are everywhere in this curriculum, not as a curiosity but by
+construction: every <strong>covariance matrix</strong> is symmetric (the covariance of
+question 3 with question 7 is the covariance of 7 with 3); every <strong>Gram matrix</strong>
+of pairwise dot products is symmetric (M1: the dot product does not care about order); the
+matrix of <strong>attention scores</strong> before masking is built from exactly such
+products. When you meet a symmetric matrix, you now know its anatomy on sight: orthogonal
+axes, real stretches, no shear, no rotation left over.
+
+<details class="appendix-box">
+  <summary>Appendix · the spectral theorem, sketched</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.spectralApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Symmetric matrices — covariance, Gram, pre-mask attention — decompose perfectly:
+    orthogonal eigenvectors, real eigenvalues, a pure scale in a rotated frame. The spectral
+    theorem is M2's "scale along rotated axes" promise, kept.
+  </p>
+</div>
+
+## The SVD: Every Matrix, Taken Apart
+
+The eigenvector programme fails for rotations and cannot even be posed for non-square
+matrices — and your data matrices are rarely square. The repair is one of the great moves
+in mathematics: stop demanding the <em>same</em> direction in and out. Ask instead for an
+orthogonal set of input directions that map to an orthogonal set of output directions.
+That request is granted for <strong>every matrix, without exception</strong>:
+
+<div class="formula-block">
+  <Tex tex={math.svdEq} />
+  <Tex class="formula-block__caption" tex={math.svdEqCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Rank-1 Matrix</p>
+  <Tex tex={math.rankOne} />
+</div>
+
+Read the sum form the way you read a regression table. Each term is a rank-1 atom: it
+listens for one input direction (v) and speaks along one output direction (u) — the
+simplest possible matrix, the M2 Collapse preset dignified with a job. The singular value
+on the front says <em>how loudly</em> that channel speaks. And the channels come sorted:
+the first term is the single best rank-1 account of the whole matrix, the second the best
+correction to it, and so on down a diminishing tail. A matrix, on this reading, is not a
+grid of numbers — it is a ranked list of stories, most important first.
+
+The misconception this module fixes is now visible: <em>the SVD is not "a function you call
+to reduce dimensions".</em> It is a statement about what a matrix <em>is</em> — a sum of
+importance-weighted rank-1 pieces. Dimension reduction is merely what happens when you stop
+reading the list early.
+
+<details class="appendix-box">
+  <summary>Appendix · SVD existence, and its relation to eigendecomposition</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.eigSvdApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Every matrix — square or not, symmetric or not — is a sum of rank-1 pieces ordered by
+    importance: rotate, scale, rotate. The singular values are the importance weights, and
+    reading them is reading what the matrix actually contains.
+  </p>
+</div>
+
+## Low Rank: Keeping What Matters
+
+If a matrix is a ranked list, the obvious experiment is to stop reading early. Keep the
+first <em>r</em> terms, discard the rest:
+
+<div class="formula-block">
+  <Tex tex={math.truncEq} />
+  <Tex class="formula-block__caption" tex={math.truncEqCaption} />
+</div>
+
+How much does that cost? Run the experiment yourself — this is the module's centrepiece,
+and the single most convincing demonstration in this curriculum:
+
+<RankSlider />
+
+Sit with what the slider shows. At a rank far below full, the image is already perfectly
+recognisable — because its singular values decay fast, the discarded tail held almost
+nothing. Then switch to the embedding matrix and watch the deeper version of the same fact:
+<em>meaning</em> survives truncation, measured honestly as nearest-neighbour agreement,
+long before the raw numbers converge. Structured matrices — images, text statistics,
+learned representations — concentrate their content in a few directions. Random noise does
+not (the companion notebook draws both spectra side by side; they look nothing alike).
+
+Now count what you paid. Storing the rank-<em>r</em> form means storing <em>r</em> thin
+column-and-row pairs instead of the full grid:
+
+<div class="formula-block">
+  <Tex tex={math.paramCount} />
+  <Tex class="formula-block__caption" tex={math.paramCountCaption} />
+</div>
+
+Two hundred and fifty-six times fewer numbers, for a matrix the size of a real transformer
+layer, at rank 8. Keep that number warm; the final section spends it.
+
+<details class="appendix-box">
+  <summary>Appendix · Eckart–Young proved, and the condition number</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.eyApp} />
+    <Tex tex={math.condApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Truncating the SVD after r terms is the provably best rank-r approximation, its error
+    exactly the discarded singular values — and structured matrices lose almost nothing at
+    ranks that cost hundreds of times fewer parameters. Meaning is cheaper to store than
+    numbers.
+  </p>
+</div>
+
+## PCA, Which You Already Do
+
+You have run this module's machinery before, under an assumed name. Principal component
+analysis — the workhorse behind factor analysis, scale construction, and every
+"two-dimensional map of our respondents" plot — <em>is</em> the SVD, applied to centred
+data:
+
+<div class="formula-block">
+  <Tex tex={math.pcaEq} />
+  <Tex class="formula-block__caption" tex={math.pcaEqCaption} />
+</div>
+
+The pieces assemble from earlier modules. Centre the data — M1's centering, moving the
+cloud's average to the origin, which is what makes "directions of spread" meaningful.
+Decompose. The right singular vectors are the principal components: the orthogonal
+directions along which your respondents actually differ, importance-ordered by explained
+variance. A hundred-question battery whose top three components explain most of the
+variance is a hundred-column matrix that is, for all practical purposes, rank three — the
+survey measures three things, asked a hundred ways. In this curriculum PCA earns its keep
+visualising embedding spaces: project 768 dimensions onto the top two components and look.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    PCA hands you the directions of greatest <em>variance</em>. Under what circumstances is
+    the direction of greatest variance not the direction of greatest <em>interest</em> —
+    and can you name a concrete case for text embeddings?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        Whenever the biggest source of variation is a nuisance. Text is the canonical case:
+        the top principal component of an embedding space is very often <em>word
+        frequency</em> — common words versus rare ones — not meaning. A map of your corpus
+        along that axis looks impressively structured and says nothing about content, which
+        is exactly the sort of thing that gets published by accident. The check and the fix
+        are problem 5; the deeper lesson is a measurement-validity one: unsupervised axes
+        arrive unlabelled, and labelling them is your job, not the algorithm's.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    PCA is the SVD of centred data: principal components are importance-ordered directions
+    of spread, and "three components explain 80%" means "this matrix is nearly rank three".
+    The largest direction of variance is whatever varies most — which is not always what
+    you care about, and for embeddings is often mere frequency.
+  </p>
+</div>
+
+## Where This Lands: The Low-Rank Bet
+
+Here is the payoff the whole module has been arranging. Fine-tuning a language model means
+updating its weight matrices — and a single attention projection in a mid-sized model is
+that 4096 × 4096 matrix from the widget's arithmetic: 16.8 million parameters, times dozens
+of layers. Updating all of it, for every task, is the brute-force option.
+
+The alternative rests on one hypothesis:
+
+<div class="formula-block">
+  <Tex tex={math.loraEq} />
+  <Tex class="formula-block__caption" tex={math.loraEqCaption} />
+</div>
+
+Notice precisely what is being assumed — problem 6 has you argue it properly. Not that the
+weight matrix is low-rank: pretrained weights genuinely use their dimensions. The bet is
+that the <em>update</em> — what a specific task needs to change — is low-rank: a new domain
+emphasis, an output format, a register, expressible in a few directions of adjustment. On
+that bet, the 256× arithmetic you just computed becomes the training budget: freeze the
+16.8 million, learn 65 thousand. You have been using this technique's result since the
+fine-tuning module of the LLMs course; its name is LoRA, and when L10 teaches it as an
+engineering practice — ranks, targets, quantised variants — the entire conceptual content
+will already be yours: <em>it is the rank slider, applied to a change in weights.</em>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Low-rank adaptation freezes the full weights and learns a rank-r update as two thin
+    matrices — betting that what a task changes is low-rank even though the weights are
+    not. The rank slider is the whole idea; L10 supplies the engineering.
+  </p>
+</div>
+
+## Problem Set
+
+Seven problems, easy to hard — the extension is a real proof. The parameter counting in
+problem 3 is worth doing by hand once in your life; after that, you may believe the widget.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    An eigenvector is a direction a matrix only stretches, and for symmetric matrices —
+    covariance, Gram, pre-mask attention — a full orthogonal set of them exists: the
+    spectral theorem, M2's "scale along rotated axes" made rigorous. The SVD extends the
+    programme to every matrix by letting input and output directions differ: rotate, scale,
+    rotate, or equivalently a sum of rank-1 pieces ordered by importance, which is the form
+    worth thinking in. Truncating that sum is the provably optimal low-rank approximation
+    (Eckart–Young), its error exactly the discarded spectrum — and structured matrices
+    concentrate so much in so few directions that recognisability and meaning survive at
+    ranks costing hundreds of times fewer parameters. PCA is this machinery applied to
+    centred data, with the standing caution that variance is not interest and the top
+    component of embedding spaces is often frequency. And the landing: low-rank adaptation
+    bets that fine-tuning <em>updates</em> are low-rank, freezing millions of parameters to
+    learn thousands — the rank slider, applied to weight changes, three modules before L10
+    gives it its name.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://www.3blue1brown.com/topics/linear-algebra" target="_blank" rel="noopener">3Blue1Brown, <em>Essence of Linear Algebra</em>, ch. 14</a>: eigenvectors and eigenvalues, animated in exactly this module's spirit.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em>, ch. 4</a>: matrix decompositions at full depth, free online.</li>
+    <li><a href="https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/" target="_blank" rel="noopener">Strang, MIT 18.06, ch. 6–7</a>: eigenvalues and the SVD from the master of the subject.</li>
+    <li><a href="https://doi.org/10.1007/BF02288367" target="_blank" rel="noopener">Eckart &amp; Young (1936), <em>The approximation of one matrix by another of lower rank</em></a>: the original optimality theorem, in Psychometrika — a social-science journal, fittingly.</li>
+    <li><a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener">Hu et al. (2021), <em>LoRA: Low-Rank Adaptation of Large Language Models</em></a>: read §1 and §4.1 now — the low-rank-update hypothesis in the authors' own words; the rest belongs to L10.</li>
+  </ul>
+</section>

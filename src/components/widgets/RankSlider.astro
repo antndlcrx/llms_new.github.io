@@ -1,0 +1,330 @@
+---
+/**
+ * rank-slider (M4) ★ — the blueprint's "most convincing demonstration in
+ * the ecosystem": one slider, rank r. Left panel: a greyscale image (and,
+ * via toggle, an embedding matrix) against its rank-r reconstruction.
+ * Right panel: the singular-value spectrum on a log axis, retained values
+ * highlighted. Readouts: parameters stored, compression ratio, relative
+ * Frobenius error — and, in embedding mode, nearest-neighbour agreement,
+ * so the point transfers from "images compress" to "learned
+ * representations are low-rank". SVD computed in the browser by
+ * hand-rolled one-sided Jacobi (validated to machine precision) — no
+ * libraries, per the widget contract. Visual grammar (spectrum plot,
+ * parameter readout) deliberately matches the live lora-widget (→ L10).
+ * All ids rks-prefixed (never a heading slug).
+ */
+---
+
+<div class="widget-wrap" id="rank-slider">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">The Rank Slider</p>
+  <p class="widget-intro">
+    Every matrix is a sum of rank-1 pieces, ordered by importance. The slider keeps the first
+    <em>r</em> of them and discards the rest. Watch how little of the matrix you need before
+    the picture — and then the <em>meaning</em> — comes back.
+  </p>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;" role="group" aria-label="Dataset">
+    <button class="rks-data" data-set="image" aria-pressed="true" style="font-family:var(--font-mono); font-size:11px; padding:6px 14px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text-sec, #3D4455); cursor:pointer;">Image (48×48)</button>
+    <button class="rks-data" data-set="embed" aria-pressed="false" style="font-family:var(--font-mono); font-size:11px; padding:6px 14px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text-sec, #3D4455); cursor:pointer;">Embedding matrix (40×24)</button>
+  </div>
+
+  <div style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center; align-items:flex-start;">
+    <div style="text-align:center;">
+      <canvas id="rks-orig" width="48" height="48" style="width:170px; height:170px; image-rendering:pixelated; border:1px solid var(--border); border-radius:4px; background:#fff;" aria-label="Original matrix"></canvas>
+      <div style="font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-top:6px;">original</div>
+    </div>
+    <div style="text-align:center;">
+      <canvas id="rks-recon" width="48" height="48" style="width:170px; height:170px; image-rendering:pixelated; border:1px solid var(--border); border-radius:4px; background:#fff;" aria-label="Rank-r reconstruction"></canvas>
+      <div style="font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-top:6px;">rank-<span id="rks-klabel">6</span> reconstruction</div>
+    </div>
+    <div style="text-align:center;">
+      <canvas id="rks-spec" width="220" height="170" style="width:220px; height:170px; border:1px solid var(--border); border-radius:4px; background:var(--card,#fff);" aria-label="Singular value spectrum, log axis, retained values highlighted"></canvas>
+      <div style="font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-top:6px;">singular values (log axis)</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:14px; align-items:center; justify-content:center; margin-top:16px; font-family:var(--font-mono); font-size:12px; color:var(--text-sec, #3D4455);">
+    <label for="rks-k">rank&nbsp;r</label>
+    <input type="range" id="rks-k" min="1" max="48" step="1" value="6" aria-label="Rank of the reconstruction" style="width:min(320px, 60%);">
+    <span id="rks-kval" style="min-width:26px; font-weight:700; color:var(--text, #0F1117);">6</span>
+  </div>
+
+  <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family:var(--font-mono); padding:10px 0 2px;">
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">parameters&nbsp;<span id="rks-params" style="font-weight:700; color:var(--text, #0F1117);">—</span>&nbsp;of&nbsp;<span id="rks-full">—</span></span>
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">compression&nbsp;<span id="rks-ratio" style="font-weight:700; color:var(--text, #0F1117);">—</span></span>
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">error&nbsp;<span id="rks-err" style="font-weight:700; color:var(--text, #0F1117);">—</span></span>
+    <span id="rks-nn-wrap" style="font-size:12px; color:var(--text-sec, #3D4455); display:none;">nearest-neighbour agreement&nbsp;<span id="rks-nn" style="font-weight:700; color:var(--text, #0F1117);">—</span></span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">
+    The spectrum falls fast because this matrix — like most matrices that describe anything
+    structured — concentrates its content in a few directions. In embedding mode, "does the
+    reconstruction still work?" is measured the way it should be: does each word keep the same
+    nearest neighbour? Meaning survives truncation long before the numbers do.
+  </p>
+</div>
+
+<script is:inline>
+(function() {
+  var origC = document.getElementById("rks-orig");
+  if (!origC) return;
+  var reconC = document.getElementById("rks-recon");
+  var specC = document.getElementById("rks-spec");
+  var slider = document.getElementById("rks-k");
+  var kval = document.getElementById("rks-kval");
+  var klabel = document.getElementById("rks-klabel");
+  var outParams = document.getElementById("rks-params");
+  var outFull = document.getElementById("rks-full");
+  var outRatio = document.getElementById("rks-ratio");
+  var outErr = document.getElementById("rks-err");
+  var outNN = document.getElementById("rks-nn");
+  var nnWrap = document.getElementById("rks-nn-wrap");
+  var dataBtns = Array.prototype.slice.call(document.querySelectorAll("#rank-slider .rks-data"));
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  /* ── One-sided Jacobi SVD (validated to machine precision) ── */
+  function jacobiSVD(A, m, n) {
+    var W = [], V = [], j, i;
+    for (j = 0; j < n; j++) {
+      var col = new Float64Array(m);
+      for (i = 0; i < m; i++) col[i] = A[i * n + j];
+      W.push(col);
+      var v = new Float64Array(n); v[j] = 1; V.push(v);
+    }
+    function dot(u, w) { var s = 0; for (var t = 0; t < u.length; t++) s += u[t] * w[t]; return s; }
+    for (var sweep = 0; sweep < 60; sweep++) {
+      var off = 0;
+      for (var p = 0; p < n - 1; p++) {
+        for (var q = p + 1; q < n; q++) {
+          var a = dot(W[p], W[p]), b = dot(W[q], W[q]), c = dot(W[p], W[q]);
+          if (Math.abs(c) <= 1e-12 * Math.sqrt(a * b) || c === 0) continue;
+          off = Math.max(off, Math.abs(c) / Math.sqrt(a * b || 1));
+          var zeta = (b - a) / (2 * c);
+          var t2 = Math.sign(zeta) / (Math.abs(zeta) + Math.sqrt(1 + zeta * zeta));
+          if (zeta === 0) t2 = 1;
+          var cs = 1 / Math.sqrt(1 + t2 * t2), sn = cs * t2;
+          for (i = 0; i < m; i++) {
+            var wp = W[p][i], wq = W[q][i];
+            W[p][i] = cs * wp - sn * wq;
+            W[q][i] = sn * wp + cs * wq;
+          }
+          for (i = 0; i < n; i++) {
+            var vp = V[p][i], vq = V[q][i];
+            V[p][i] = cs * vp - sn * vq;
+            V[q][i] = sn * vp + cs * vq;
+          }
+        }
+      }
+      if (off < 1e-11) break;
+    }
+    var trip = [];
+    for (j = 0; j < n; j++) {
+      var s = Math.sqrt(dot(W[j], W[j]));
+      var u = new Float64Array(m);
+      if (s > 1e-12) for (i = 0; i < m; i++) u[i] = W[j][i] / s;
+      trip.push({ s: s, u: u, v: V[j] });
+    }
+    trip.sort(function(x, y) { return y.s - x.s; });
+    return trip;
+  }
+
+  /* ── Deterministic pseudo-random ── */
+  var seed = 7;
+  function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+  /* ── Dataset 1: procedural 48×48 greyscale "sun over hills" ── */
+  function makeImage() {
+    var m = 48, n = 48, A = new Float64Array(m * n);
+    for (var y = 0; y < m; y++) {
+      for (var x = 0; x < n; x++) {
+        var v = 0.85 - 0.3 * (y / m); // sky gradient
+        var dx = x - 34, dy = y - 11, dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 6.5) v = 0.98 - Math.max(0, (dist - 4.5)) * 0.12; // sun with soft edge
+        var h1 = 30 + 4 * Math.cos(x / 7.6);
+        var h2 = 37 + 3 * Math.cos(x / 4.2 + 1.3);
+        if (y > h1) v = 0.38; // back hills
+        if (y > h2) v = 0.16; // front hills
+        v += (rnd() - 0.5) * 0.04; // honest noise
+        A[y * n + x] = Math.max(0, Math.min(1, v));
+      }
+    }
+    return { A: A, m: m, n: n };
+  }
+
+  /* ── Dataset 2: 40×24 embedding matrix with 4 planted clusters ── */
+  var WORDS = ["dog","cat","horse","cow","sheep","wolf","bear","fox","deer","goat",
+               "france","brazil","japan","kenya","canada","spain","india","egypt","chile","norway",
+               "joy","anger","fear","hope","pride","grief","envy","calm","shame","trust",
+               "hammer","saw","drill","wrench","chisel","plane","pliers","file","spanner","vice"];
+  function makeEmbed() {
+    // 4 clusters x 10 words. Each cluster: a centroid plus an internal 1-D
+    // gradient, so every word has a *meaningful* nearest neighbour (its
+    // neighbour along the cluster's line) rather than a coin-flip tie —
+    // which is what makes NN agreement a fair metric under truncation.
+    var m = 40, n = 24, A = new Float64Array(m * n);
+    var centroids = [], dirs = [];
+    for (var c = 0; c < 4; c++) {
+      var cen = [], dir = [];
+      for (var d = 0; d < n; d++) { cen.push((rnd() - 0.5) * 2); dir.push(rnd() - 0.5); }
+      var norm = 0; for (var d1 = 0; d1 < n; d1++) norm += dir[d1] * dir[d1];
+      norm = Math.sqrt(norm);
+      for (var d3 = 0; d3 < n; d3++) dir[d3] /= norm;
+      centroids.push(cen); dirs.push(dir);
+    }
+    for (var w = 0; w < m; w++) {
+      var c2 = Math.floor(w / 10), t = (w % 10) - 4.5; // spread along the cluster line
+      for (var d2 = 0; d2 < n; d2++) {
+        A[w * n + d2] = centroids[c2][d2] + 0.55 * t * dirs[c2][d2] + (rnd() - 0.5) * 0.1;
+      }
+    }
+    return { A: A, m: m, n: n };
+  }
+
+  var datasets = { image: makeImage(), embed: makeEmbed() };
+  var svds = { image: jacobiSVD(datasets.image.A, 48, 48), embed: jacobiSVD(datasets.embed.A, 40, 24) };
+  var fullNN = null; // full-rank nearest neighbours for embed mode
+  var current = "image";
+
+  function reconstruct(name, k) {
+    var ds = datasets[name], trip = svds[name];
+    var R = new Float64Array(ds.m * ds.n);
+    var kk = Math.min(k, trip.length);
+    for (var t = 0; t < kk; t++) {
+      var s = trip[t].s, u = trip[t].u, v = trip[t].v;
+      for (var i = 0; i < ds.m; i++) {
+        var su = s * u[i];
+        for (var j = 0; j < ds.n; j++) R[i * ds.n + j] += su * v[j];
+      }
+    }
+    return R;
+  }
+
+  function nearestNeighbours(M, m, n) {
+    var nn = new Int32Array(m);
+    for (var i = 0; i < m; i++) {
+      var best = -1, bestCos = -Infinity;
+      var ni = 0; for (var d = 0; d < n; d++) ni += M[i * n + d] * M[i * n + d];
+      ni = Math.sqrt(ni) || 1;
+      for (var j = 0; j < m; j++) {
+        if (j === i) continue;
+        var dotv = 0, nj = 0;
+        for (var d2 = 0; d2 < n; d2++) { dotv += M[i * n + d2] * M[j * n + d2]; nj += M[j * n + d2] * M[j * n + d2]; }
+        var cos = dotv / (ni * (Math.sqrt(nj) || 1));
+        if (cos > bestCos) { bestCos = cos; best = j; }
+      }
+      nn[i] = best;
+    }
+    return nn;
+  }
+
+  function drawMatrix(canvas, M, m, n, lo, hi) {
+    canvas.width = n; canvas.height = m;
+    var ctx = canvas.getContext("2d");
+    var img = ctx.createImageData(n, m);
+    for (var i = 0; i < m * n; i++) {
+      var v = (M[i] - lo) / (hi - lo);
+      v = Math.max(0, Math.min(1, v));
+      var g = Math.round(v * 255);
+      img.data[i * 4] = g; img.data[i * 4 + 1] = g; img.data[i * 4 + 2] = g; img.data[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function drawSpectrum(name, k) {
+    var trip = svds[name];
+    var ctx = specC.getContext("2d");
+    var Wc = specC.width, Hc = specC.height;
+    ctx.clearRect(0, 0, Wc, Hc);
+    var accent = cssVar("--accent", "#2D8ABF");
+    var dim = cssVar("--text-dim", "#9CA3AF");
+    var border = cssVar("--border", "#E2E6EE");
+    var sMax = trip[0].s, sMin = Math.max(trip[trip.length - 1].s, sMax * 1e-4);
+    var logMax = Math.log10(sMax), logMin = Math.log10(sMin);
+    var pad = 8, baseY = Hc - 14;
+    var bw = (Wc - 2 * pad) / trip.length;
+    ctx.strokeStyle = border; ctx.beginPath(); ctx.moveTo(pad, baseY); ctx.lineTo(Wc - pad, baseY); ctx.stroke();
+    for (var i = 0; i < trip.length; i++) {
+      var s = Math.max(trip[i].s, sMin);
+      var h = (Math.log10(s) - logMin) / (logMax - logMin || 1);
+      h = Math.max(0.02, h) * (baseY - 12);
+      ctx.fillStyle = i < k ? accent : dim;
+      ctx.globalAlpha = i < k ? 1 : 0.45;
+      ctx.fillRect(pad + i * bw + 0.5, baseY - h, Math.max(1, bw - 1.2), h);
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = dim;
+    ctx.font = "9px " + cssVar("--font-mono", "monospace");
+    ctx.textAlign = "left"; ctx.fillText("kept: " + k, pad, Hc - 3);
+    ctx.textAlign = "right"; ctx.fillText("discarded: " + (trip.length - k), Wc - pad, Hc - 3);
+  }
+
+  function update() {
+    var name = current;
+    var ds = datasets[name], trip = svds[name];
+    var k = parseInt(slider.value, 10);
+    kval.textContent = k; klabel.textContent = k;
+
+    var R = reconstruct(name, k);
+    var lo = name === "image" ? 0 : -2.2, hi = name === "image" ? 1 : 2.2;
+    drawMatrix(origC, ds.A, ds.m, ds.n, lo, hi);
+    drawMatrix(reconC, R, ds.m, ds.n, lo, hi);
+    drawSpectrum(name, k);
+
+    // parameter counting: k(m + n + 1) vs mn
+    var params = k * (ds.m + ds.n + 1), full = ds.m * ds.n;
+    outParams.textContent = params.toLocaleString();
+    outFull.textContent = full.toLocaleString();
+    outRatio.textContent = params < full ? (full / params).toFixed(1) + "×" : "none";
+
+    // exact relative Frobenius error from the discarded spectrum
+    var kept = 0, total = 0;
+    for (var i = 0; i < trip.length; i++) {
+      var s2 = trip[i].s * trip[i].s;
+      total += s2; if (i < k) kept += s2;
+    }
+    var err = Math.sqrt(Math.max(0, total - kept) / (total || 1));
+    outErr.textContent = (err * 100).toFixed(1) + "%";
+
+    if (name === "embed") {
+      if (!fullNN) fullNN = nearestNeighbours(datasets.embed.A, 40, 24);
+      var nnK = nearestNeighbours(R, 40, 24);
+      var agree = 0;
+      for (var w = 0; w < 40; w++) if (nnK[w] === fullNN[w]) agree++;
+      outNN.textContent = Math.round(100 * agree / 40) + "%";
+      nnWrap.style.display = "";
+    } else {
+      nnWrap.style.display = "none";
+    }
+  }
+
+  slider.addEventListener("input", update);
+
+  dataBtns.forEach(function(b) {
+    b.addEventListener("click", function() {
+      current = b.getAttribute("data-set");
+      var maxK = current === "image" ? 48 : 24;
+      slider.max = maxK;
+      if (parseInt(slider.value, 10) > maxK) slider.value = maxK;
+      slider.value = Math.min(parseInt(slider.value, 10), maxK);
+      if (current === "embed" && parseInt(slider.value, 10) > 24) slider.value = 6;
+      dataBtns.forEach(function(x) {
+        var active = x === b;
+        x.setAttribute("aria-pressed", String(active));
+        x.style.borderColor = active ? cssVar("--accent", "#2D8ABF") : cssVar("--border", "#E2E6EE");
+        x.style.color = active ? cssVar("--accent", "#2D8ABF") : cssVar("--text-sec", "#3D4455");
+      });
+      update();
+    });
+  });
+  // initial active styling
+  dataBtns[0].style.borderColor = cssVar("--accent", "#2D8ABF");
+  dataBtns[0].style.color = cssVar("--accent", "#2D8ABF");
+
+  update();
+})();
+</script>

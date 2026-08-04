@@ -15,3 +15,4 @@ never part of the site build.
 | `math/m3_projection.ipynb` | `modules/math/m3_projection.ipynb` | explanatory ("Play with this") |
 | `math/m4_svd.ipynb` | `modules/math/m4_svd.ipynb` | explanatory ("Play with this") |
 | `math/m5_derivatives.ipynb` | `modules/math/m5_derivatives.ipynb` | explanatory ("Play with this") |
+| `math/m6_optimisation.ipynb` | `modules/math/m6_optimisation.ipynb` | explanatory ("Play with this") |

@@ -1,0 +1,397 @@
+---
+/**
+ * entropy-coder (M8 ★ shared with S1) — an editable distribution over six
+ * symbols, a live Huffman code (tree + codeword table), and average code
+ * length sitting just above the entropy. A "build the code for the wrong
+ * distribution" selector makes cross-entropy physical: average length rises
+ * and the gap is the KL divergence (plus Huffman rounding).
+ *
+ * One engine, two framings — this resolves the carried M8/S1 open question:
+ * the `framing` prop relabels the surrounding copy (M8: "surprise has
+ * units"; S1: "the storage floor") without touching the engine, so
+ * systems/bits mounts <EntropyCoder framing="storage" /> when built.
+ *
+ * Insight it must deliver: entropy is not an abstraction — it is the number
+ * of bits, and you can see the bits.
+ * Hand-rolled, no libraries. Ids prefixed enc- (never a heading slug).
+ */
+interface Props {
+  framing?: 'surprise' | 'storage';
+}
+const { framing = 'surprise' } = Astro.props;
+
+const copy =
+  framing === 'storage'
+    ? {
+        title: 'The Storage Floor',
+        intro:
+          'Six symbols make up a file. Drag the bars to set how often each occurs, and watch the code panel: however clever the code, the average bits per symbol never falls below one number — the entropy of the distribution. That number is the floor every compressor is pressing against.',
+        caption:
+          'A fixed-width code spends 3 bits on every symbol regardless of frequency. The Huffman code spends short words on common symbols and long words on rare ones — and its average lands just above the entropy, never below it. The floor is a property of the distribution, not of the cleverness of the coder.',
+      }
+    : {
+        title: 'Surprise Has Units',
+        intro:
+          'Six symbols, a distribution you control, and an actual code. Drag the bars and watch three numbers move together: the entropy (expected surprise, in bits), the Huffman code’s average length sitting just above it, and the size of a real 1,000-symbol message. Then build the code for the wrong distribution and watch the bill for being wrong — that bill is the KL divergence.',
+        caption:
+          'The code panel is the point: entropy is not an abstraction but a count of bits you can watch being spent. Common symbols earn short codewords, rare ones long — and no assignment of codewords can average below the entropy. Switch the code to the wrong distribution and the average rises to (roughly) the cross-entropy; the excess is the KL divergence, plus a little Huffman rounding.',
+      };
+---
+
+<div class="widget-wrap" id="entropy-coder">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">{copy.title}</p>
+  <p class="widget-intro">{copy.intro}</p>
+
+  <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-bottom:10px; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455);">
+    <span role="group" aria-label="Presets" style="display:flex; gap:6px; flex-wrap:wrap;">
+      <button class="enc-btn enc-preset" data-p="uniform">Uniform</button>
+      <button class="enc-btn enc-preset" data-p="skewed">Skewed</button>
+      <button class="enc-btn enc-preset" data-p="certain">Near-certain</button>
+      <button class="enc-btn enc-preset" data-p="english">English-like</button>
+    </span>
+    <label style="display:flex; align-items:center; gap:6px;">Build the code for
+      <select id="enc-codefor" aria-label="Distribution to build the code for" style="font-family:var(--font-mono); font-size:11px; padding:4px 6px; border:1px solid var(--border); border-radius:4px; background:var(--card,#fff); color:var(--text-sec,#3D4455);">
+        <option value="self" selected>this distribution (optimal)</option>
+        <option value="uniform">uniform (the wrong model)</option>
+        <option value="skewed">skewed (the wrong model)</option>
+        <option value="english">English-like (the wrong model)</option>
+      </select>
+    </label>
+  </div>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;" class="visual-diagram">
+    <canvas id="enc-bars" width="270" height="250" style="max-width:270px; width:100%; touch-action:none;" tabindex="0" aria-label="Probability bars for six symbols. Drag a bar to change its probability; with keyboard, left and right arrows select a symbol, up and down adjust it."></canvas>
+    <canvas id="enc-tree" width="200" height="250" style="max-width:200px; width:100%;" aria-label="Huffman tree for the current code."></canvas>
+  </div>
+
+  <div id="enc-table-wrap" style="overflow-x:auto; margin:6px auto 0; max-width:480px;">
+    <table style="width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455);">
+      <thead>
+        <tr id="enc-table-head" style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left; padding:4px 8px; font-weight:400; color:var(--text-muted);">symbol</th>
+          <th style="text-align:right; padding:4px 8px; font-weight:400; color:var(--text-muted);">p</th>
+          <th style="text-align:left; padding:4px 8px; font-weight:400; color:var(--text-muted);">codeword</th>
+          <th style="text-align:right; padding:4px 8px; font-weight:400; color:var(--text-muted);">bits</th>
+          <th style="text-align:right; padding:4px 8px; font-weight:400; color:var(--text-muted);">−log₂ p</th>
+        </tr>
+      </thead>
+      <tbody id="enc-table"></tbody>
+    </table>
+  </div>
+
+  <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family:var(--font-mono); padding:10px 0 2px;">
+    <span style="font-size:13px; font-weight:700; color:var(--text, #0F1117);">H(p)&nbsp;=&nbsp;<span id="enc-entropy">0.00</span>&nbsp;bits</span>
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">avg&nbsp;code&nbsp;=&nbsp;<span id="enc-avg">0.00</span>&nbsp;bits</span>
+    <span id="enc-wrong-out" style="display:none; font-size:12px; color:var(--text-sec, #3D4455);">H(p,q)&nbsp;=&nbsp;<span id="enc-ce">0.00</span>&nbsp;·&nbsp;KL&nbsp;=&nbsp;<span id="enc-kl">0.00</span></span>
+    <span id="enc-verdict" style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted, #6B7280);"></span>
+  </div>
+  <p style="text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--text-muted); margin:4px 0 0;">
+    1,000-symbol message:&nbsp;<span id="enc-msg" style="color:var(--text, #0F1117); font-weight:700;">—</span>&nbsp;bits&nbsp;·&nbsp;fixed&nbsp;3-bit&nbsp;code:&nbsp;3,000&nbsp;bits&nbsp;·&nbsp;<span id="enc-saved">—</span>
+  </p>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">{copy.caption}</p>
+</div>
+
+<style is:global>
+  .enc-btn {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-sec, #3D4455);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .enc-btn:hover { border-color: var(--accent, #2D8ABF); color: var(--accent, #2D8ABF); }
+</style>
+
+<script is:inline>
+(function() {
+  var bars = document.getElementById("enc-bars");
+  if (!bars) return;
+  var bctx = bars.getContext("2d");
+  var tree = document.getElementById("enc-tree");
+  var tctx = tree.getContext("2d");
+  var tbody = document.getElementById("enc-table");
+  var outH = document.getElementById("enc-entropy");
+  var outAvg = document.getElementById("enc-avg");
+  var outCE = document.getElementById("enc-ce");
+  var outKL = document.getElementById("enc-kl");
+  var wrongOut = document.getElementById("enc-wrong-out");
+  var outMsg = document.getElementById("enc-msg");
+  var outSaved = document.getElementById("enc-saved");
+  var verdict = document.getElementById("enc-verdict");
+  var codeFor = document.getElementById("enc-codefor");
+
+  var SYMBOLS = ["A", "B", "C", "D", "E", "F"];
+  var n = SYMBOLS.length;
+  var PRESETS = {
+    uniform: [1, 1, 1, 1, 1, 1],
+    skewed: [0.45, 0.25, 0.14, 0.09, 0.05, 0.02],
+    certain: [0.9, 0.02, 0.02, 0.02, 0.02, 0.02],
+    english: [0.32, 0.23, 0.2, 0.13, 0.09, 0.03]
+  };
+  var weights = PRESETS.skewed.slice();
+  var selected = 0;
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  function probs(w) {
+    var s = w.reduce(function(a, b) { return a + b; }, 0);
+    return w.map(function(v) { return v / s; });
+  }
+
+  function entropy(p) {
+    var h = 0;
+    for (var i = 0; i < p.length; i++) if (p[i] > 0) h -= p[i] * Math.log2(p[i]);
+    return h;
+  }
+
+  function crossEntropy(p, q) {
+    var h = 0;
+    for (var i = 0; i < p.length; i++) if (p[i] > 0) h -= p[i] * Math.log2(Math.max(q[i], 1e-12));
+    return h;
+  }
+
+  // Hand-rolled Huffman: returns { codes: [bitstring per symbol], root: treeNode }.
+  // Node: { p, sym (leaf) | left, right }.
+  function huffman(p) {
+    var nodes = p.map(function(pi, i) { return { p: pi, sym: i }; });
+    if (nodes.length === 1) return { codes: ["0"], root: nodes[0] };
+    while (nodes.length > 1) {
+      nodes.sort(function(a, b) { return a.p - b.p; });
+      var a = nodes.shift(), b = nodes.shift();
+      nodes.push({ p: a.p + b.p, left: a, right: b });
+    }
+    var root = nodes[0];
+    var codes = new Array(p.length);
+    (function walk(node, prefix) {
+      if (node.sym !== undefined) { codes[node.sym] = prefix || "0"; return; }
+      walk(node.left, prefix + "0");
+      walk(node.right, prefix + "1");
+    })(root, "");
+    return { codes: codes, root: root };
+  }
+
+  function drawBars(p) {
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+    var textCol = cssVar("--text", "#0F1117");
+    var font = cssVar("--font-body", "Inter, system-ui, sans-serif");
+    var W = 270, H = 250, PAD_L = 30, PAD_R = 6, PAD_T = 20, PAD_B = 30;
+    var plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+    var slotW = plotW / n, barW = slotW * 0.62;
+
+    bctx.clearRect(0, 0, W, H);
+    bctx.font = "11px " + font;
+    for (var g = 0; g <= 4; g++) {
+      var y = PAD_T + plotH * (1 - g / 4);
+      bctx.strokeStyle = border; bctx.lineWidth = g === 0 ? 1.2 : 0.6;
+      bctx.beginPath(); bctx.moveTo(PAD_L, y); bctx.lineTo(W - PAD_R, y); bctx.stroke();
+      bctx.fillStyle = textDim; bctx.textAlign = "right";
+      bctx.fillText((g / 4).toFixed(2), PAD_L - 4, y + 4);
+    }
+    for (var i = 0; i < n; i++) {
+      var cx = PAD_L + slotW * i + slotW / 2;
+      var h = p[i] * plotH;
+      var x = cx - barW / 2, y0 = PAD_T + plotH - h;
+      bctx.fillStyle = accent;
+      bctx.globalAlpha = 0.8;
+      bctx.fillRect(x, y0, barW, h);
+      bctx.globalAlpha = 1;
+      if (i === selected) {
+        bctx.strokeStyle = accentDark; bctx.lineWidth = 1.5;
+        bctx.setLineDash([3, 3]);
+        bctx.strokeRect(x - 3, PAD_T - 4, barW + 6, plotH + 8);
+        bctx.setLineDash([]);
+      }
+      bctx.fillStyle = textCol; bctx.textAlign = "center";
+      bctx.fillText(p[i].toFixed(2), cx, y0 - 5);
+      bctx.fillStyle = textDim;
+      bctx.fillText(SYMBOLS[i], cx, H - 12);
+    }
+    bctx.fillStyle = textDim; bctx.textAlign = "left";
+    bctx.fillText("p(symbol)", PAD_L, 12);
+  }
+
+  function drawTree(root, codes) {
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+    var textCol = cssVar("--text", "0F1117");
+    var font = cssVar("--font-mono", "monospace");
+    var W = 200, H = 250, PAD = 14;
+
+    // Depth of tree for row spacing.
+    function depth(node) {
+      if (node.sym !== undefined) return 0;
+      return 1 + Math.max(depth(node.left), depth(node.right));
+    }
+    var d = depth(root);
+    var rowH = (H - 2 * PAD - 10) / Math.max(d, 1);
+
+    // Assign leaf x positions left-to-right in tree order.
+    var leafX = 0, leafCount = codes.length;
+    var slot = (W - 2 * PAD) / leafCount;
+    function layout(node) {
+      if (node.sym !== undefined) {
+        node.x = PAD + slot * leafX + slot / 2;
+        leafX += 1;
+        node.y = PAD + 8 + depthOf(node) * 0; // set below by walk depth
+        return node.x;
+      }
+      var lx = layout(node.left);
+      var rx = layout(node.right);
+      node.x = (lx + rx) / 2;
+      return node.x;
+    }
+    function depthOf() { return 0; }
+    layout(root);
+    // Second pass: set y by node depth from root.
+    (function setY(node, level) {
+      node.y = PAD + 8 + level * rowH;
+      if (node.sym === undefined) {
+        setY(node.left, level + 1);
+        setY(node.right, level + 1);
+      } else {
+        node.y = PAD + 8 + d * rowH; // all leaves on the bottom row
+      }
+    })(root, 0);
+
+    tctx.clearRect(0, 0, W, H);
+    tctx.font = "10px " + font;
+    (function draw(node) {
+      if (node.sym === undefined) {
+        [["0", node.left], ["1", node.right]].forEach(function(pair) {
+          var child = pair[1];
+          tctx.strokeStyle = border; tctx.lineWidth = 1.2;
+          tctx.beginPath(); tctx.moveTo(node.x, node.y); tctx.lineTo(child.x, child.y); tctx.stroke();
+          tctx.fillStyle = textDim; tctx.textAlign = "center";
+          tctx.fillText(pair[0], (node.x + child.x) / 2 + (pair[0] === "0" ? -6 : 6), (node.y + child.y) / 2);
+          draw(child);
+        });
+        tctx.fillStyle = cssVar("--surface", "#F2F4F8");
+        tctx.strokeStyle = border;
+        tctx.beginPath(); tctx.arc(node.x, node.y, 4, 0, Math.PI * 2); tctx.fill(); tctx.stroke();
+      } else {
+        tctx.fillStyle = accent;
+        tctx.beginPath(); tctx.arc(node.x, node.y, 7, 0, Math.PI * 2); tctx.fill();
+        tctx.fillStyle = "#fff"; tctx.textAlign = "center";
+        tctx.fillText(SYMBOLS[node.sym], node.x, node.y + 3.5);
+      }
+    })(root);
+    tctx.fillStyle = textDim; tctx.textAlign = "left";
+    tctx.fillText("the code, as a tree", PAD, 12);
+  }
+
+  function update() {
+    var p = probs(weights);
+    var mode = codeFor.value;
+    var q = mode === "self" ? p : probs(PRESETS[mode].slice());
+    var hp = entropy(p);
+    var built = huffman(q);
+    var avg = 0;
+    for (var i = 0; i < n; i++) avg += p[i] * built.codes[i].length;
+
+    drawBars(p);
+    drawTree(built.root, built.codes);
+
+    // Code table.
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var rows = "";
+    for (var j = 0; j < n; j++) {
+      rows += '<tr style="border-bottom:1px solid var(--border-lt, #EAEEF4);">' +
+        '<td style="padding:3px 8px; font-weight:700; color:' + accentDark + ';">' + SYMBOLS[j] + "</td>" +
+        '<td style="padding:3px 8px; text-align:right;">' + p[j].toFixed(2) + "</td>" +
+        '<td style="padding:3px 8px; letter-spacing:0.08em;">' + built.codes[j] + "</td>" +
+        '<td style="padding:3px 8px; text-align:right;">' + built.codes[j].length + "</td>" +
+        '<td style="padding:3px 8px; text-align:right; color:var(--text-muted);">' + (p[j] > 0 ? (-Math.log2(p[j])).toFixed(2) : "∞") + "</td>" +
+        "</tr>";
+    }
+    tbody.innerHTML = rows;
+
+    outH.textContent = hp.toFixed(2);
+    outAvg.textContent = avg.toFixed(2);
+    if (mode === "self") {
+      wrongOut.style.display = "none";
+      verdict.textContent = "redundancy " + (avg - hp).toFixed(2) + " bits (Huffman rounding)";
+    } else {
+      var ce = crossEntropy(p, q);
+      wrongOut.style.display = "inline";
+      outCE.textContent = ce.toFixed(2);
+      outKL.textContent = (ce - hp).toFixed(2);
+      verdict.textContent = "wrong model: excess = KL + rounding";
+    }
+    var msgBits = Math.round(avg * 1000);
+    outMsg.textContent = msgBits.toLocaleString("en-GB");
+    outSaved.textContent = msgBits <= 3000
+      ? "saved " + Math.round((1 - msgBits / 3000) * 100) + "%"
+      : "spent " + Math.round((msgBits / 3000 - 1) * 100) + "% extra";
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("#entropy-coder .enc-preset"), function(b) {
+    b.addEventListener("click", function() {
+      weights = PRESETS[b.getAttribute("data-p")].slice();
+      update();
+    });
+  });
+  codeFor.addEventListener("change", update);
+
+  // Drag a bar vertically to set its weight (SoftmaxExplorer grammar).
+  var dragging = -1, lastY = 0;
+  var W = 270, PAD_L = 30, PAD_R = 6;
+  var slotW = (W - PAD_L - PAD_R) / n;
+  function symbolAt(clientX) {
+    var rect = bars.getBoundingClientRect();
+    var mx = (clientX - rect.left) * (W / rect.width);
+    var i = Math.floor((mx - PAD_L) / slotW);
+    return i >= 0 && i < n ? i : -1;
+  }
+  function nudge(i, dy) {
+    weights[i] = Math.max(0.005, Math.min(3, weights[i] - dy / 150));
+    update();
+  }
+  bars.addEventListener("mousedown", function(e) {
+    var i = symbolAt(e.clientX);
+    if (i >= 0) { dragging = i; selected = i; lastY = e.clientY; e.preventDefault(); update(); }
+  });
+  document.addEventListener("mousemove", function(e) {
+    if (dragging < 0) return;
+    nudge(dragging, e.clientY - lastY);
+    lastY = e.clientY;
+  });
+  document.addEventListener("mouseup", function() { dragging = -1; });
+  bars.addEventListener("touchstart", function(e) {
+    var i = symbolAt(e.touches[0].clientX);
+    if (i >= 0) { dragging = i; selected = i; lastY = e.touches[0].clientY; e.preventDefault(); update(); }
+  }, { passive: false });
+  bars.addEventListener("touchmove", function(e) {
+    if (dragging < 0) return;
+    e.preventDefault();
+    nudge(dragging, e.touches[0].clientY - lastY);
+    lastY = e.touches[0].clientY;
+  }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = -1; });
+
+  bars.addEventListener("keydown", function(e) {
+    if (e.key === "ArrowLeft") { selected = (selected + n - 1) % n; }
+    else if (e.key === "ArrowRight") { selected = (selected + 1) % n; }
+    else if (e.key === "ArrowUp") { weights[selected] = Math.min(3, weights[selected] * 1.15); }
+    else if (e.key === "ArrowDown") { weights[selected] = Math.max(0.005, weights[selected] / 1.15); }
+    else return;
+    e.preventDefault();
+    update();
+  });
+
+  update();
+})();
+</script>

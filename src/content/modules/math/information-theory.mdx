@@ -4,10 +4,429 @@ order: 8
 id: M8
 title: Information Theory
 description: "Cross-entropy is expected surprise, measured in bits: the cost of encoding data using the wrong model."
-objectives: []
+objectives:
+  - Explain why surprise is logarithmic, from the requirement that independent surprises add.
+  - Compute entropy and give its coding interpretation.
+  - Explain what cross-entropy measures and why it is the language-modelling loss.
+  - Interpret KL divergence and its asymmetry, and say what the KL term in preference tuning is for.
+  - Convert cross-entropy to perplexity and interpret the result.
 prerequisites: [math/probability]
-estimatedMinutes: 85
-status: planned
+seeAlso: []
+estimatedMinutes: 95
+status: draft
+widgets:
+  - entropy-coder
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import EntropyCoder from '../../../components/widgets/EntropyCoder.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  surpriseReq: String.raw`$$S(p_1 \cdot p_2) = S(p_1) + S(p_2) \quad\Longrightarrow\quad S(p) = -\log p$$`,
+  surpriseReqCaption: String.raw`The requirement on the left — independent surprises add — together with "certain events carry no surprise" ($S(1)=0$) and "rarer is more surprising" (decreasing), forces the logarithm. Nothing else satisfies all three. Base 2 is a choice of unit, and the unit is the <strong>bit</strong>.`,
+  entropyDef: String.raw`The expected surprise of a distribution: $H(p) = -\sum_i p_i \log_2 p_i$ bits. Operationally, the average number of bits an optimal code needs per symbol drawn from $p$ — the compression floor. Uniform distributions maximise it ($\log_2 n$ for $n$ outcomes); certainty minimises it (0 bits: a message everyone can predict costs nothing to send).`,
+  englishBits: String.raw`$$\underbrace{\log_2 27 \approx 4.75}_{\text{uniform letters}} \qquad \text{vs} \qquad \underbrace{\approx 1 \text{ bit/character}}_{\text{English, well modelled}}$$`,
+  englishBitsCaption: String.raw`Real text is far from uniform — "e" is common, "q" predicts "u", words repeat — and every regularity lowers the expected surprise. Shannon estimated English at roughly one bit per character under a good model: three quarters of the naive cost is structure, not content. Compression is the act of collecting that difference.`,
+  ceDef: String.raw`The expected surprise when data comes from $p$ but you scored it with $q$: $H(p, q) = -\sum_i p_i \log_2 q_i$. Operationally: the average bits per symbol when encoding data from $p$ with a code built for $q$. Always $H(p,q) \geq H(p)$, with equality exactly when $q = p$ — using the wrong model can only cost extra.`,
+  ceMLE: String.raw`$$\arg\min_\theta \; \underbrace{-\tfrac{1}{N}\sum_{t=1}^{N} \log q_\theta(x_t \mid x_{<t})}_{\text{cross-entropy loss}} \;=\; \arg\max_\theta \; \underbrace{\prod_{t=1}^{N} q_\theta(x_t \mid x_{<t})}_{\text{likelihood}}$$`,
+  ceMLECaption: String.raw`M7's promised one line: the cross-entropy loss is the negative average log-likelihood, so minimising one is maximising the other. "Train to minimise cross-entropy" and "fit by maximum likelihood" are the same sentence in two dialects — yours and the machine-learning literature's.`,
+  klDef: String.raw`The excess cost of the wrong model: $D_{\mathrm{KL}}(p \,\|\, q) = H(p, q) - H(p) = \sum_i p_i \log_2 \frac{p_i}{q_i}$. Non-negative, zero only when $q = p$ — and <strong>not symmetric</strong>: the cost of using $q$ when the truth is $p$ differs from the cost of using $p$ when the truth is $q$.`,
+  klAsym: String.raw`$$D_{\mathrm{KL}}(p \,\|\, q) \;\neq\; D_{\mathrm{KL}}(q \,\|\, p)$$`,
+  klAsymCaption: String.raw`The asymmetry does real work. Minimising $D_{\mathrm{KL}}(p\|q)$ over $q$ punishes $q$ for assigning low probability where $p$ has mass — $q$ must <em>cover</em> everything $p$ does (mass-covering). Minimising $D_{\mathrm{KL}}(q\|p)$ punishes $q$ for putting mass where $p$ has little — $q$ retreats to $p$'s largest mode (mode-seeking). Which direction you regularise decides what kind of wrong your model is allowed to be.`,
+  pplDef: String.raw`$$\mathrm{PPL} = 2^{\,H(p,q)\ \text{(bits)}} = e^{\,H(p,q)\ \text{(nats)}}$$`,
+  pplDefCaption: String.raw`Perplexity is cross-entropy pushed back through the exponential — undoing the logarithm that made surprise additive. The result reads as an <em>effective branching factor</em>: perplexity 12 means the model is, on average, as uncertain as if it faced 12 equally likely next tokens.`,
+  srcCoding: String.raw`<strong>The source coding theorem</strong> (Shannon, 1948): no lossless code can average fewer than $H(p)$ bits per symbol, and codes exist achieving within 1 bit of it (within $\varepsilon$ of it, coding blocks of symbols jointly). This is why entropy is not a metaphor for information but its measure: the theorem pins the abstraction to a physical quantity — bits on a wire — with matching upper and lower bounds.`,
+  condEntropy: String.raw`<strong>Conditional entropy</strong> $H(X \mid Y) = \sum_y p(y)\, H(X \mid Y = y)$ is the surprise remaining once you know $Y$, and the <strong>chain rule for entropy</strong> $H(X, Y) = H(Y) + H(X \mid Y)$ mirrors M7's chain rule for probability, logarithm-side. Context reduces entropy — $H(X \mid Y) \leq H(X)$ — which is the information-theoretic restatement of why conditioning on context is the whole business of a language model.`,
+  jensen: String.raw`<strong>Non-negativity of KL, via Jensen's inequality.</strong> $-D_{\mathrm{KL}}(p\|q) = \sum_i p_i \log_2 \frac{q_i}{p_i} \leq \log_2 \sum_i p_i \frac{q_i}{p_i} = \log_2 \sum_i q_i = \log_2 1 = 0$, using that $\log$ is concave (Jensen: the average of logs is at most the log of the average). Equality requires $q_i/p_i$ constant, i.e. $q = p$. Problem 7 asks you to reproduce this — it is four steps and each is checkable.`,
+  mutualInfo: String.raw`<strong>Mutual information</strong> $I(X; Y) = H(X) - H(X \mid Y) = D_{\mathrm{KL}}\!\left(p(x,y)\,\|\,p(x)p(y)\right)$: the bits that knowing $Y$ saves you about $X$ — equivalently, the KL distance of the joint from independence. It appears in this curriculum's neighbourhood as a feature-selection criterion and in probing studies asking how much a representation "knows" about a property. <strong>Differential entropy</strong> (the continuous analogue) is trickier — it can be negative and is not invariant to reparametrisation — one reason this module stays firmly discrete.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Compute the entropy, in bits, of: (a)&nbsp;the uniform distribution over 6 symbols; (b)&nbsp;$p = (0.9,\ 0.02,\ 0.02,\ 0.02,\ 0.02,\ 0.02)$; (c)&nbsp;a certain outcome, $p = (1, 0, \ldots)$. Check (a) and (b) against the widget's presets.</p>`,
+    solution: String.raw`<p>(a)&nbsp;$\log_2 6 \approx 2.58$ bits — uniform is the maximum for 6 outcomes. (b)&nbsp;$0.9\log_2\frac{1}{0.9} + 5 \times 0.02\log_2\frac{1}{0.02} \approx 0.137 + 0.564 \approx 0.70$ bits — near-certainty is cheap to encode. (c)&nbsp;$0$ bits, taking $0\log 0 = 0$ (its limit): a message whose content is already known transmits no information.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>For $p = (\tfrac12, \tfrac14, \tfrac14)$ and $q = (\tfrac14, \tfrac14, \tfrac12)$: compute $H(p)$, $H(p,q)$, and $D_{\mathrm{KL}}(p\|q)$, and verify $D_{\mathrm{KL}} = H(p,q) - H(p)$.</p>`,
+    solution: String.raw`<p>$H(p) = \tfrac12(1) + \tfrac14(2) + \tfrac14(2) = 1.5$ bits. $H(p,q) = \tfrac12\log_2 4 + \tfrac14\log_2 4 + \tfrac14\log_2 2 = 1 + 0.5 + 0.25 = 1.75$ bits. Directly: $D_{\mathrm{KL}}(p\|q) = \tfrac12\log_2 2 + \tfrac14\log_2 1 + \tfrac14\log_2 \tfrac12 = 0.5 + 0 - 0.25 = 0.25$ bits $= 1.75 - 1.5$. ✓ The excess quarter-bit is the price, per symbol, of scoring this data with the wrong model.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>A language model reports a cross-entropy loss of $3.2$ bits per token on held-out text. Convert to perplexity and interpret the number. What would perplexity $1$ mean? What about perplexity equal to the vocabulary size?</p>`,
+    solution: String.raw`<p>$\mathrm{PPL} = 2^{3.2} \approx 9.2$: on average the model is as uncertain as if it faced about nine equally likely next tokens. Perplexity $1$ would mean zero loss — the model predicts every token with certainty (impossible on real text, and a red flag for evaluation leakage). Perplexity equal to $\lvert V \rvert$ means the model has learned nothing: it is exactly as uncertain as the uniform distribution over the whole vocabulary.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Derive that surprise must be logarithmic. Requirements: $S$ depends only on the probability $p$; independent events' surprises add, $S(p_1 p_2) = S(p_1) + S(p_2)$; more probable means less surprising; $S(1) = 0$. Show these force $S(p) = -c\log p$ for some $c > 0$.</p>`,
+    solution: String.raw`<p>Additivity over products is the functional equation of the logarithm: substitute $g(x) = S(e^{-x})$, so that products of probabilities become sums of arguments, and the requirement reads $g(x + y) = g(x) + g(y)$ — whose monotone solutions are exactly $g(x) = cx$. Back-substituting, $S(p) = -c\log p$. Monotonicity ("rarer is more surprising") forces $c > 0$, and $S(1) = 0$ holds automatically. Choosing $c$ to make the log base 2 names the unit: one bit is the surprise of one fair coin. The satisfying part: bits were not <em>defined</em> into surprise — they were forced by wanting surprises to add.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Let $p = (\tfrac12, \tfrac12)$ and $q = (\tfrac34, \tfrac14)$. Compute $D_{\mathrm{KL}}(p\|q)$ and $D_{\mathrm{KL}}(q\|p)$ and confirm they differ. Then: a fine-tuned model $q$ is kept close to its reference $p$ by a KL penalty. Which direction is used, and what behaviour does each direction permit?</p>`,
+    solution: String.raw`<p>$D_{\mathrm{KL}}(p\|q) = \tfrac12\log_2\tfrac{1/2}{3/4} + \tfrac12\log_2\tfrac{1/2}{1/4} \approx -0.292 + 0.5 = 0.208$ bits; $D_{\mathrm{KL}}(q\|p) = \tfrac34\log_2\tfrac{3}{2} + \tfrac14\log_2\tfrac12 \approx 0.439 - 0.25 = 0.189$ bits. Different. ✓ Preference tuning penalises $D_{\mathrm{KL}}(q \,\|\, p_{\text{ref}})$ — the fine-tuned policy in the first slot. That direction is mode-seeking: $q$ is punished for putting mass where the reference has little (inventing wild new behaviour) but tolerated for <em>narrowing</em> onto a subset of what the reference already does — exactly the asymmetry you want in a leash: sharpen, do not stray.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Two models report perplexity 12 and 15 on the same evaluation text, but they use different tokenizers. Why is "12 beats 15" an invalid conclusion? What would make the comparison valid?</p>`,
+    solution: String.raw`<p>Perplexity is per-<em>token</em> uncertainty, and the two models are being examined on different token sequences: a tokenizer that cuts the text into fewer, longer tokens concentrates more surprise into each one and reports higher per-token perplexity for identical quality on the underlying <em>text</em>. The valid comparison renormalises to a shared unit — total log-probability of the same string, or bits per character/byte — so both models pay for the same text in the same currency. The mistake reaches publication; L3 returns to it when tokenization gets its own module.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Prove $D_{\mathrm{KL}}(p\|q) \geq 0$, with equality iff $p = q$, using Jensen's inequality (for concave $f$: $\mathbb{E}[f(Z)] \leq f(\mathbb{E}[Z])$).</p>`,
+    solution: String.raw`<p>$-D_{\mathrm{KL}}(p\|q) = \sum_i p_i \log_2 \tfrac{q_i}{p_i} = \mathbb{E}_p\!\left[\log_2 \tfrac{q}{p}\right] \leq \log_2 \mathbb{E}_p\!\left[\tfrac{q}{p}\right] = \log_2 \sum_i p_i \tfrac{q_i}{p_i} = \log_2 \sum_i q_i = \log_2 1 = 0$ — Jensen applied to the concave $\log_2$. So $D_{\mathrm{KL}} \geq 0$. Equality in Jensen for a strictly concave function requires the ratio $q/p$ to be constant, and a constant ratio between two distributions that both sum to 1 must equal 1: $p = q$. This four-line fact is why "the loss is minimised when the model matches the data" is a theorem rather than a slogan.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Show that minimising cross-entropy over a dataset is maximising likelihood. Let the data be $x_1, \ldots, x_N$ and the model $q_\theta$; write the average loss $\mathcal{L}(\theta) = -\tfrac1N \sum_t \log_2 q_\theta(x_t)$ and connect it to the likelihood. Bonus: express $\mathcal{L}$ using the empirical distribution $\hat p$.</p>`,
+    solution: String.raw`<p>$\mathcal{L}(\theta) = -\tfrac1N \log_2 \prod_t q_\theta(x_t)$ — a negative constant times the log of the likelihood. The logarithm is monotone and the scale negative, so the $\theta$ minimising $\mathcal{L}$ is exactly the $\theta$ maximising $\prod_t q_\theta(x_t)$: cross-entropy minimisation <em>is</em> maximum likelihood — M7's estimator in M8's units. Bonus: grouping repeated outcomes, $\mathcal{L}(\theta) = -\sum_x \hat p(x) \log_2 q_\theta(x) = H(\hat p, q_\theta)$ — the training loss is literally the cross-entropy between the empirical distribution and the model, which is why driving it down drives $q_\theta$ toward the data, and why its floor is $H(\hat p)$: the part of the data no model can predict away.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    The final module of the track, and its most satisfying one. You train a language model by
+    "minimising cross-entropy loss," you compare models by "perplexity," and you keep a
+    fine-tuned model honest with a "KL penalty" — three phrases used daily and mostly
+    accepted on faith. All three are the same idea wearing different units: <em>surprise,
+    measured in bits</em>. This module derives the idea from one requirement, hands you an
+    actual code so the bits are visible, and closes the loop M7 left open — by the end,
+    cross-entropy is not "the loss function you use" but a physical quantity: the cost, in
+    bits, of describing the world with the wrong model of it.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Explain why surprise is logarithmic, from the requirement that independent surprises add.</li>
+      <li>Compute entropy and give its coding interpretation.</li>
+      <li>Explain what cross-entropy measures and why it is the language-modelling loss.</li>
+      <li>Interpret KL divergence and its asymmetry, and say what the KL term in preference tuning is for.</li>
+      <li>Convert cross-entropy to perplexity and interpret the result.</li>
+    </ol>
+  </div>
+</section>
+
+## Surprise
+
+Start from an instinct you already trust professionally: <strong>rare events are
+informative</strong>. A p-value is a measure of surprise; a headline is news precisely when
+it was improbable; a survey answer tells you most about a respondent when few others gave
+it. Information theory begins by taking that instinct seriously enough to give it units.
+
+So: assign a number — the <em>surprise</em> — to an event, depending only on its
+probability. Three requirements, none negotiable. Certainty carries no surprise. Rarer
+means more surprising. And when two <em>independent</em> events both happen, their
+surprises should <em>add</em> — learning two unrelated facts is exactly as informative as
+learning each separately. But independent probabilities <em>multiply</em> (M7). A function
+that turns multiplication into addition has one name:
+
+<div class="formula-block">
+  <Tex tex={math.surpriseReq} />
+  <Tex class="formula-block__caption" tex={math.surpriseReqCaption} />
+</div>
+
+That is the whole derivation, and it is worth pausing on what just happened: the logarithm
+was not chosen for convenience — it was <em>forced</em> by wanting surprises to add
+(problem 4 has you make the argument airtight). A fair coin flip carries exactly 1 bit. An
+event with probability one in a thousand carries about 10. The unit is real, and the next
+section makes it physical.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Surprise is −log p — forced, not chosen, by the requirement that independent surprises
+    add while independent probabilities multiply. Base 2 names the unit: the bit, the
+    surprise of one fair coin flip.
+  </p>
+</div>
+
+## Entropy: Expected Surprise
+
+A distribution produces events, each carrying its own surprise; the distribution's
+<strong>entropy</strong> is the surprise you should <em>expect</em> — and it turns out to
+be a physical quantity you can watch being spent.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Entropy</p>
+  <Tex tex={math.entropyDef} />
+</div>
+
+The coding interpretation is what makes entropy more than a formula. Suppose you must
+transmit a long stream of symbols, and every bit costs money. A fixed-width code spends the
+same on every symbol — 3 bits each, for six symbols — no matter how predictable the stream
+is. But if some symbols are common, you can do better: give the frequent symbols short
+codewords and the rare ones long ones, and the <em>average</em> falls. How far can it fall?
+To the entropy, and no further — that is Shannon's source coding theorem (stated properly
+in the appendix). Entropy is the <strong>compression floor</strong>: the bits per symbol the
+distribution itself demands, however clever the coder. Watch the bits:
+
+<EntropyCoder framing="surprise" />
+
+Run the presets against your intuition: uniform is maximally expensive — nothing is
+predictable, so nothing can be abbreviated; near-certainty is nearly free — a stream that
+is almost all one symbol barely needs saying. On real language the effect is dramatic:
+
+<div class="formula-block">
+  <Tex tex={math.englishBits} />
+  <Tex class="formula-block__caption" tex={math.englishBitsCaption} />
+</div>
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    You record 1,000 flips of a fair coin, and 1,000 flips of a coin that lands heads 99% of
+    the time. Which file compresses to fewer bits — and what, precisely, does the other
+    file's incompressibility say about the word "information"?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        The biased coin's file compresses enormously (entropy ≈ 0.08 bits per flip: recode
+        the long runs of heads); the fair coin's file compresses not at all — at 1 full bit
+        per flip it is already as short as its content allows. The uncomfortable and correct
+        conclusion: <em>maximum-entropy noise is maximum information</em> in Shannon's sense,
+        because every flip is a genuine surprise. Information theory measures
+        unpredictability, not usefulness — a distinction to hold onto when you hear that
+        language models "compress the internet": what they learn is precisely the
+        predictable part.
+      </p>
+    </div>
+  </details>
+</div>
+
+<details class="appendix-box">
+  <summary>Appendix · the source coding theorem, conditional entropy</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.srcCoding} />
+    <Tex tex={math.condEntropy} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Entropy is expected surprise and, by the source coding theorem, the compression floor:
+    the average bits per symbol no code can beat. Uniform maximises it, certainty zeroes it,
+    and well-modelled English sits near one bit per character — most of text is structure.
+  </p>
+</div>
+
+## Cross-Entropy: The Bill for the Wrong Model
+
+Everything so far assumed you know the true distribution. You never do — you have a model.
+Cross-entropy prices the gap.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Cross-Entropy</p>
+  <Tex tex={math.ceDef} />
+</div>
+
+The operational story is the widget's wrong-model mode, and it deserves to be run rather
+than read: switch <strong>Build the code for</strong> to a distribution that is not yours,
+and the average bits per symbol rises off the floor. Symbols the wrong model considered
+rare got long codewords; where they are in fact common, you pay the excess on every
+occurrence. Scoring data with the wrong model has a <em>bill</em>, the bill is in bits, and
+it is never negative.
+
+Which is why cross-entropy is <strong>the</strong> loss. A language model scores each
+actual next token, and the loss averages the model's surprise at what the data did.
+Minimising it drives the model toward the data distribution, because cross-entropy bottoms
+out exactly at equality. And the payoff M7 set up arrives in one line:
+
+<div class="formula-block">
+  <Tex tex={math.ceMLE} />
+  <Tex class="formula-block__caption" tex={math.ceMLECaption} />
+</div>
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    Suppose a model assigns probability exactly zero to a token — and then that token occurs
+    in the training data. What happens to the cross-entropy loss? And what does this explain
+    about the design of softmax (M7)?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        The loss is −log 0 = ∞: one impossible-according-to-the-model event costs infinite
+        bits, because a code built for that model kept <em>no codeword at all</em> for the
+        event it ruled out. This is why softmax exponentiates: an exponential is strictly
+        positive, so a softmax model can disbelieve a token intensely but never rule it out —
+        it always keeps a long codeword in the drawer. An architecture that could emit exact
+        zeros would be untrainable by this loss the first time reality disagreed with it.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Cross-entropy is expected surprise under the wrong model — operationally, the bits per
+    symbol paid when encoding p's data with q's code. It bottoms out exactly at q = p,
+    which is why it is the loss; and minimising it is maximum likelihood in different units.
+  </p>
+</div>
+
+## KL Divergence: The Excess
+
+Cross-entropy bundles two costs: the irreducible floor that even the true model pays, and
+the excess charged for being wrong. KL divergence is the excess alone:
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">KL Divergence</p>
+  <Tex tex={math.klDef} />
+</div>
+
+In the widget's wrong-model mode this is the labelled gap between the average code length
+and the floor — the part of the bill that is your model's fault. It is always non-negative
+(the appendix proves it in four lines via Jensen's inequality, and problem 7 asks you to
+own the proof), zero only at equality. And, critically:
+
+<div class="formula-block">
+  <Tex tex={math.klAsym} />
+  <Tex class="formula-block__caption" tex={math.klAsymCaption} />
+</div>
+
+The asymmetry is not a technical blemish — it is a design surface, and the LLMs track uses
+it. When preference tuning (DPO, RLHF) keeps a fine-tuned policy near its reference model
+with a KL penalty, the <em>direction</em> of the penalty decides which deviations are
+cheap: the standard choice punishes the policy for inventing behaviour the reference finds
+improbable, while letting it sharpen toward a subset of what the reference already does — a
+leash that permits specialisation and forbids wandering (problem 5 works both directions).
+Knowledge distillation makes the complementary choice. When you meet these losses in the
+LLMs track, you will know them for what they are: bits of excess surprise, pointed
+carefully.
+
+<details class="appendix-box">
+  <summary>Appendix · Jensen and the non-negativity proof, mutual information</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.jensen} />
+    <Tex tex={math.mutualInfo} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    KL divergence is cross-entropy minus entropy: the excess bits your wrong model costs,
+    non-negative by Jensen and zero only at truth. Its asymmetry — mass-covering one way,
+    mode-seeking the other — is exactly what makes it usable as a leash in preference tuning.
+  </p>
+</div>
+
+## Perplexity
+
+The last translation. Loss curves are quoted in cross-entropy; papers and leaderboards
+quote <strong>perplexity</strong>, and the relationship is one exponential:
+
+<div class="formula-block">
+  <Tex tex={math.pplDef} />
+  <Tex class="formula-block__caption" tex={math.pplDefCaption} />
+</div>
+
+The effective-branching-factor reading is what makes perplexity humane: a cross-entropy of
+3.2 bits per token means little to intuition, but "as uncertain as a nine-way choice" is a
+picture. Perplexity 1 is omniscience — and, on real text, a red flag that your evaluation
+has leaked. Perplexity equal to the vocabulary size is a model that has learned nothing at
+all. Real language models live in the low single and double digits on English text, a
+number worth sitting with: out of fifty thousand possibilities, context typically narrows
+the next token to the practical equivalent of a handful.
+
+One warning with a publication trail behind it: <strong>perplexity is per-token, and
+tokens are not a shared unit.</strong> Two models with different tokenizers slice the same
+text into different sequences; the model with longer tokens packs more surprise into each
+one and reports higher perplexity at identical quality. Comparing them is comparing prices
+in different currencies without converting (problem 6 makes it precise; L3 returns to it
+when tokenization gets its own module). The convertible currencies are total
+log-probability of the same string, or bits per character.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Perplexity is the exponential of cross-entropy — uncertainty re-expressed as an
+    effective number of equally likely choices. Interpretable within one tokenizer, bounded
+    by 1 and the vocabulary size, and never comparable across tokenizers without converting
+    to a shared unit.
+  </p>
+</div>
+
+## Where This Lands: Three Derivations, and a Track Complete
+
+The LLMs track uses three information-theoretic facts constantly, and this module has now
+derived all of them. The <strong>loss</strong>: cross-entropy between each true next token
+and the predicted distribution — expected surprise, and simultaneously maximum likelihood.
+The <strong>metric</strong>: perplexity, that loss exponentiated into an effective
+branching factor. The <strong>leash</strong>: a KL penalty holding a tuned policy near its
+reference, its direction chosen for the asymmetry this module explained. Three things
+formerly accepted on faith, now owned.
+
+And with that, the Mathematical Foundations track is complete. Its debts are paid: M1
+planted the √d question and M7 closed it with variance. M2's Collapse preset became M4's
+rank, on its way to LoRA in the LLMs track. M5's multiplying derivatives will resurface as
+the deep-learning track's vanishing gradients. And this module's entropy will be met again,
+from the other side, by the systems track — where the widget you used above returns with
+different labels, because "expected surprise" and "the storage floor" were the same number
+all along. What the track promised at the start of M1 stands delivered: when you read
+<em>"attention scores are scaled dot products of queries and keys, trained by minimising
+cross-entropy,"</em> every word now has a picture attached.
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    The loss, the metric, and the leash — cross-entropy, perplexity, KL — are one idea in
+    three costumes: surprise, measured in bits. The track ends with every planted debt paid,
+    and the same number waiting to be met again from the systems side.
+  </p>
+</div>
+
+## Problem Set
+
+Eight problems, easy to hard — the track's final assessment, and its most connected: nearly
+every problem touches something the LLMs track will use within weeks.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    Surprise is −log p, forced by requiring independent surprises to add; its unit is the
+    bit, the surprise of a fair coin. Entropy is expected surprise and, by the source coding
+    theorem, the compression floor — a real code's average length sits just above it and no
+    code goes below. Cross-entropy is expected surprise under the wrong model: the bits paid
+    to encode p's data with q's code, minimised exactly at q = p, which is why it is the
+    language-modelling loss and why minimising it is maximum likelihood. KL divergence is
+    the excess alone — non-negative by Jensen, asymmetric in ways that do design work, and
+    deployed as the leash in preference tuning. Perplexity is cross-entropy exponentiated
+    into an effective branching factor: interpretable within one tokenizer, treacherous
+    across two. The track closes with its promises kept — and the entropy you can now derive
+    as expected surprise will be waiting, relabelled as a storage floor, when the systems
+    track begins.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://www.inference.org.uk/itprnn/book.pdf" target="_blank" rel="noopener">MacKay, <em>Information Theory, Inference, and Learning Algorithms</em>, ch. 1–5</a>: the best treatment for this audience, free — entropy, coding, and inference taught as one subject.</li>
+    <li><a href="https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf" target="_blank" rel="noopener">Shannon (1948), <em>A Mathematical Theory of Communication</em>, §1–6</a>: the founding paper, and genuinely readable — the entropy of printed English is estimated by hand.</li>
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em>, §6.5</a>: the same quantities in the book's notation, free online.</li>
+    <li><a href="https://onlinelibrary.wiley.com/doi/book/10.1002/047174882X" target="_blank" rel="noopener">Cover &amp; Thomas, <em>Elements of Information Theory</em>, ch. 2</a>: the standard reference for the appendix material — conditional entropy, chain rules, and the theorems at full rigour.</li>
+  </ul>
+</section>

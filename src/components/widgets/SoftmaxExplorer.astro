@@ -1,0 +1,247 @@
+---
+/**
+ * softmax-explorer (M7) — editable logits over named tokens, a live softmax
+ * bar chart, a temperature slider, and a shift-all-logits control that
+ * demonstrates shift invariance by visibly changing nothing.
+ * The insight: temperature is not a confidence setting — it is a sharpness
+ * setting on a fixed set of scores; T→0 is argmax, high T is uniform.
+ * Entropy readout in bits deliberately seeds M8.
+ * Shares its visual grammar with day-2's temperature-viz-root (→ L5).
+ * Hand-rolled canvas, no libraries. Ids prefixed sfx- (never a heading slug).
+ */
+---
+
+<div class="widget-wrap" id="softmax-explorer">
+  <p class="widget-eyebrow">Interactive</p>
+  <p class="widget-title">From Scores to Probabilities</p>
+  <p class="widget-intro">
+    The model has scored eight candidate next words for <em>"The results of the survey
+    were&nbsp;…"</em>. Drag a bar up or down to change that token's logit, sweep the
+    temperature, and press the shift buttons — and notice which of those three moves
+    actually changes the distribution.
+  </p>
+
+  <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-bottom:10px; font-family:var(--font-mono); font-size:11px; color:var(--text-sec, #3D4455);">
+    <label style="display:flex; align-items:center; gap:8px;">Temperature
+      <input type="range" id="sfx-temp" min="0.05" max="3" step="0.05" value="1" aria-label="Temperature" style="width:150px;">
+      <span id="sfx-temp-val" style="min-width:36px; display:inline-block;">1.00</span>
+    </label>
+    <span role="group" aria-label="Shift all logits" style="display:flex; gap:6px; align-items:center;">
+      <button id="sfx-shift-down" class="sfx-btn" aria-label="Shift all logits down by one">all logits −1</button>
+      <button id="sfx-shift-up" class="sfx-btn" aria-label="Shift all logits up by one">all logits +1</button>
+    </span>
+    <button id="sfx-reset" class="sfx-btn">Reset</button>
+  </div>
+
+  <div class="visual-diagram" style="margin: 0 0 4px;">
+    <canvas id="sfx-canvas" width="480" height="330" style="width:100%; max-width:480px; display:block; margin:0 auto; touch-action:none;" tabindex="0" aria-label="Probability bars for eight candidate tokens. Drag a bar to change its logit; with keyboard, left and right arrows select a token, up and down change its logit."></canvas>
+  </div>
+
+  <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:baseline; justify-content:center; font-family:var(--font-mono); padding:6px 0 2px;">
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">argmax:&nbsp;<span id="sfx-argmax" style="font-weight:700; color:var(--text, #0F1117);">–</span></span>
+    <span style="font-size:12px; color:var(--text-sec, #3D4455);">top&nbsp;p&nbsp;=&nbsp;<span id="sfx-top">0.00</span></span>
+    <span style="font-size:13px; font-weight:700; color:var(--text, #0F1117);">entropy&nbsp;=&nbsp;<span id="sfx-entropy">0.00</span>&nbsp;bits</span>
+    <span id="sfx-note" style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-muted, #6B7280);"></span>
+  </div>
+
+  <p class="visual-diagram__caption" style="margin-top:10px;">
+    Dragging a bar changes the scores, so the distribution moves. Temperature redistributes
+    probability over the <em>same</em> scores — sharper towards the winner as T&nbsp;→&nbsp;0,
+    flatter towards uniform as T grows. And shifting <em>every</em> logit by the same amount
+    changes the numbers on the bars but not a single probability: softmax only ever sees the
+    <em>differences</em> between scores.
+  </p>
+</div>
+
+<style is:global>
+  .sfx-btn {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-sec, #3D4455);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .sfx-btn:hover { border-color: var(--accent, #2D8ABF); color: var(--accent, #2D8ABF); }
+</style>
+
+<script is:inline>
+(function() {
+  var canvas = document.getElementById("sfx-canvas");
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var tempSlider = document.getElementById("sfx-temp");
+  var tempVal = document.getElementById("sfx-temp-val");
+  var outArgmax = document.getElementById("sfx-argmax");
+  var outTop = document.getElementById("sfx-top");
+  var outEntropy = document.getElementById("sfx-entropy");
+  var note = document.getElementById("sfx-note");
+
+  var TOKENS = ["surprising", "clear", "mixed", "inconclusive", "significant", "wrong", "delicious", "purple"];
+  var DEFAULTS = [2.4, 1.8, 1.5, 0.9, 0.4, -0.6, -2.2, -3.0];
+  var logits = DEFAULTS.slice();
+  var T = 1.0;
+  var selected = 0;
+
+  var W = 480, H = 330;
+  var PAD_L = 34, PAD_R = 10, PAD_T = 26, PAD_B = 56;
+  var plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
+  var n = TOKENS.length;
+  var slotW = plotW / n;
+  var barW = slotW * 0.62;
+
+  function cssVar(name, fallback) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  function softmax(z, t) {
+    var m = Math.max.apply(null, z);
+    var exps = z.map(function(v) { return Math.exp((v - m) / t); });
+    var s = exps.reduce(function(a, b) { return a + b; }, 0);
+    return exps.map(function(e) { return e / s; });
+  }
+
+  function entropyBits(p) {
+    var h = 0;
+    for (var i = 0; i < p.length; i++) if (p[i] > 0) h -= p[i] * Math.log2(p[i]);
+    return h;
+  }
+
+  function draw() {
+    var accent = cssVar("--accent", "#2D8ABF");
+    var accentDark = cssVar("--accent-dark", "#1E5A8A");
+    var border = cssVar("--border", "#E2E6EE");
+    var textMuted = cssVar("--text-muted", "#6B7280");
+    var textDim = cssVar("--text-dim", "#9CA3AF");
+    var textCol = cssVar("--text", "#0F1117");
+    var font = cssVar("--font-body", "Inter, system-ui, sans-serif");
+
+    var p = softmax(logits, T);
+    var arg = p.indexOf(Math.max.apply(null, p));
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = "11px " + font;
+
+    // y gridlines at 0, .25, .5, .75, 1
+    for (var g = 0; g <= 4; g++) {
+      var frac = g / 4;
+      var y = PAD_T + plotH * (1 - frac);
+      ctx.strokeStyle = border; ctx.lineWidth = g === 0 ? 1.2 : 0.6;
+      ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+      ctx.fillStyle = textDim; ctx.textAlign = "right";
+      ctx.fillText(frac.toFixed(2), PAD_L - 5, y + 4);
+    }
+
+    for (var i = 0; i < n; i++) {
+      var cx = PAD_L + slotW * i + slotW / 2;
+      var h = p[i] * plotH;
+      var x = cx - barW / 2;
+      var y0 = PAD_T + plotH - h;
+      ctx.fillStyle = i === arg ? accentDark : accent;
+      ctx.globalAlpha = i === arg ? 1 : 0.75;
+      ctx.fillRect(x, y0, barW, h);
+      ctx.globalAlpha = 1;
+      // selection ring for keyboard users
+      if (i === selected) {
+        ctx.strokeStyle = accentDark; ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.strokeRect(x - 3, PAD_T - 4, barW + 6, plotH + 8);
+        ctx.setLineDash([]);
+      }
+      // probability on top
+      ctx.fillStyle = textCol; ctx.textAlign = "center";
+      ctx.fillText(p[i].toFixed(2), cx, y0 - 5);
+      // token label + logit beneath
+      ctx.save();
+      ctx.translate(cx, PAD_T + plotH + 14);
+      ctx.rotate(-0.5);
+      ctx.textAlign = "right";
+      ctx.fillStyle = i === arg ? accentDark : textMuted;
+      ctx.fillText(TOKENS[i], 0, 4);
+      ctx.restore();
+      ctx.fillStyle = textDim; ctx.textAlign = "center";
+      ctx.fillText(logits[i].toFixed(1), cx, H - 4);
+    }
+    // axis captions
+    ctx.fillStyle = textDim; ctx.textAlign = "left";
+    ctx.fillText("P(token)", PAD_L, 14);
+    ctx.textAlign = "right";
+    ctx.fillText("logits", W - PAD_R, H - 4);
+
+    outArgmax.textContent = TOKENS[arg];
+    outTop.textContent = p[arg].toFixed(2);
+    outEntropy.textContent = entropyBits(p).toFixed(2);
+    tempVal.textContent = T.toFixed(2);
+    if (T <= 0.11) note.textContent = "T → 0: argmax";
+    else if (T >= 2.6) note.textContent = "high T: towards uniform (max " + Math.log2(n).toFixed(2) + " bits)";
+    else note.textContent = "";
+  }
+
+  tempSlider.addEventListener("input", function() {
+    T = parseFloat(tempSlider.value);
+    draw();
+  });
+
+  document.getElementById("sfx-shift-up").addEventListener("click", function() {
+    logits = logits.map(function(v) { return v + 1; });
+    draw();
+  });
+  document.getElementById("sfx-shift-down").addEventListener("click", function() {
+    logits = logits.map(function(v) { return v - 1; });
+    draw();
+  });
+  document.getElementById("sfx-reset").addEventListener("click", function() {
+    logits = DEFAULTS.slice();
+    T = 1.0; tempSlider.value = "1";
+    draw();
+  });
+
+  // Drag a bar vertically to set its logit (relative drag, 1 logit per 40px).
+  var dragging = -1, lastY = 0;
+  function tokenAt(clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = (clientX - rect.left) * (W / rect.width);
+    var i = Math.floor((mx - PAD_L) / slotW);
+    return i >= 0 && i < n ? i : -1;
+  }
+  canvas.addEventListener("mousedown", function(e) {
+    var i = tokenAt(e.clientX, e.clientY);
+    if (i >= 0) { dragging = i; selected = i; lastY = e.clientY; e.preventDefault(); draw(); }
+  });
+  document.addEventListener("mousemove", function(e) {
+    if (dragging < 0) return;
+    logits[dragging] = Math.max(-5, Math.min(5, logits[dragging] + (lastY - e.clientY) / 40));
+    lastY = e.clientY;
+    draw();
+  });
+  document.addEventListener("mouseup", function() { dragging = -1; });
+  canvas.addEventListener("touchstart", function(e) {
+    var i = tokenAt(e.touches[0].clientX, e.touches[0].clientY);
+    if (i >= 0) { dragging = i; selected = i; lastY = e.touches[0].clientY; e.preventDefault(); draw(); }
+  }, { passive: false });
+  canvas.addEventListener("touchmove", function(e) {
+    if (dragging < 0) return;
+    e.preventDefault();
+    logits[dragging] = Math.max(-5, Math.min(5, logits[dragging] + (lastY - e.touches[0].clientY) / 40));
+    lastY = e.touches[0].clientY;
+    draw();
+  }, { passive: false });
+  document.addEventListener("touchend", function() { dragging = -1; });
+
+  canvas.addEventListener("keydown", function(e) {
+    if (e.key === "ArrowLeft") { selected = (selected + n - 1) % n; }
+    else if (e.key === "ArrowRight") { selected = (selected + 1) % n; }
+    else if (e.key === "ArrowUp") { logits[selected] = Math.min(5, logits[selected] + 0.2); }
+    else if (e.key === "ArrowDown") { logits[selected] = Math.max(-5, logits[selected] - 0.2); }
+    else return;
+    e.preventDefault();
+    draw();
+  });
+
+  draw();
+})();
+</script>

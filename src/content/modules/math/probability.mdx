@@ -3,11 +3,466 @@ track: math
 order: 7
 id: M7
 title: Probability for Language
-description: "From probability as inference — p-values and confidence intervals — to probability as generative modelling over discrete sequences."
-objectives: []
+description: "From probability as inference — p-values and confidence intervals — to probability as generative modelling over discrete sequences. One line of probability is what a language model is."
+objectives:
+  - Describe a distribution over a vocabulary.
+  - Decompose a joint distribution using the chain rule of probability.
+  - Explain why language violates independence and what conditional dependence buys.
+  - Derive softmax's properties — positivity, normalisation, shift invariance, and temperature.
+  - State what a language model is, probabilistically — and close M1's open question about the √d in attention.
 prerequisites: [math/vectors]
-estimatedMinutes: 80
-status: planned
+seeAlso: []
+estimatedMinutes: 90
+status: draft
+widgets:
+  - softmax-explorer
+layer: spine
 ---
 
-*Planned — not yet written. See the curriculum blueprint for the full specification.*
+import Tex from '../../../components/Tex.astro';
+import SoftmaxExplorer from '../../../components/widgets/SoftmaxExplorer.astro';
+import ProblemSet from '../../../components/ProblemSet.astro';
+
+export const math = {
+  catDef: String.raw`A random variable $X$ taking one of $K$ named outcomes, with probabilities $p_1, \ldots, p_K$ satisfying $p_k \geq 0$ and $\sum_k p_k = 1$. No ordering, no distances between outcomes, no bell curve — just a labelled list of non-negative numbers summing to one. A language model's output is a categorical distribution with $K \approx 50{,}000$.`,
+  chainRule: String.raw`$$P(w_1, w_2, \ldots, w_n) \;=\; \prod_{i=1}^{n} P(w_i \mid w_1, \ldots, w_{i-1})$$`,
+  chainRuleCaption: String.raw`The chain rule of probability: any joint distribution over a sequence factors exactly — no assumptions — into a product of conditionals, each token given everything before it. <strong>This single line is what a language model is.</strong> The model's entire job is to supply the factors.`,
+  condDef: String.raw`$$P(w_i \mid w_{1}, \ldots, w_{i-1}) \;=\; \frac{P(w_1, \ldots, w_i)}{P(w_1, \ldots, w_{i-1})}$$`,
+  condDefCaption: String.raw`Conditioning: restrict attention to the histories that actually occurred, and renormalise. Every "given" in this module is this one operation.`,
+  bowIndep: String.raw`$$P(w_1, \ldots, w_n \mid \text{topic}) \;\stackrel{\text{BoW}}{=}\; \prod_{i=1}^{n} P(w_i \mid \text{topic})$$`,
+  bowIndepCaption: String.raw`The bag-of-words assumption: given the topic, every word is drawn independently. The order of the factors — and therefore of the words — cannot matter. That is not a small simplification; it is a declaration that word order carries no information.`,
+  softmaxDef: String.raw`$$\text{softmax}(\mathbf{z})_k \;=\; \frac{e^{z_k}}{\sum_j e^{z_j}}, \qquad\quad \text{softmax}_T(\mathbf{z})_k \;=\; \frac{e^{z_k/T}}{\sum_j e^{z_j/T}}$$`,
+  softmaxDefCaption: String.raw`Exponentiate every score, then divide by the total. With a temperature $T$, divide the scores by $T$ first: $T < 1$ sharpens the distribution towards the winner, $T > 1$ flattens it towards uniform.`,
+  softmaxBox: String.raw`The map from a vector of arbitrary real scores ("logits") $\mathbf{z} \in \mathbb{R}^K$ to a categorical distribution: $\text{softmax}(\mathbf{z})_k = e^{z_k} / \sum_j e^{z_j}$. Strictly positive, sums to one, preserves the ranking of the scores, and depends only on the <em>differences</em> between them: $\text{softmax}(\mathbf{z} + c) = \text{softmax}(\mathbf{z})$ for any constant $c$.`,
+  shiftInv: String.raw`$$\text{softmax}(\mathbf{z} + c)_k = \frac{e^{z_k + c}}{\sum_j e^{z_j + c}} = \frac{e^{c}\, e^{z_k}}{e^{c} \sum_j e^{z_j}} = \text{softmax}(\mathbf{z})_k$$`,
+  shiftInvCaption: String.raw`Shift invariance, proved in one line: the $e^c$ cancels top and bottom. Consequence for practice: implementations always compute $\text{softmax}(\mathbf{z} - \max_k z_k)$ — mathematically identical, but the largest exponent becomes $e^0 = 1$ and nothing overflows. Why overflow threatens at all is the systems track's floating-point story.`,
+  likelihoodDef: String.raw`For observed data $D$ and parameters $\theta$, the <strong>likelihood</strong> is $L(\theta) = P(D \mid \theta)$ — the probability the model assigns to what actually happened, read as a function of the parameters. <strong>Maximum likelihood estimation</strong> chooses $\hat{\theta} = \arg\max_\theta L(\theta)$: the parameters under which the observed data is least surprising.`,
+  logLik: String.raw`$$\log P(w_1, \ldots, w_n \mid \theta) \;=\; \sum_{i=1}^{n} \log P(w_i \mid w_{<i}, \theta)$$`,
+  logLikCaption: String.raw`The chain rule turns the likelihood of a corpus into a sum of per-token log-probabilities. Training a language model maximises exactly this sum — one term per token, "how unsurprised was the model by what came next?" — over trillions of tokens.`,
+  varSum: String.raw`$$\operatorname{Var}\!\left(\mathbf{q} \cdot \mathbf{k}\right) \;=\; \operatorname{Var}\!\left(\sum_{i=1}^{d} q_i k_i\right) \;=\; \sum_{i=1}^{d} \operatorname{Var}(q_i k_i) \;=\; d$$`,
+  varSumCaption: String.raw`For independent entries with mean 0 and variance 1: variances of independent terms add, each product term has variance 1, and $d$ of them give variance $d$ — so the typical size of a raw attention score grows like $\sqrt{d}$. The appendix does this calculation in full.`,
+  attnScaled: String.raw`$$\text{score}(\mathbf{q}, \mathbf{k}) = \frac{\mathbf{q} \cdot \mathbf{k}}{\sqrt{d_k}} \qquad \Rightarrow \qquad \operatorname{Var}(\text{score}) = \frac{d_k}{(\sqrt{d_k})^2} = 1$$`,
+  attnScaledCaption: String.raw`M1's formula, with its denominator finally explained: dividing by $\sqrt{d_k}$ divides the variance by $d_k$, pinning the score spread at 1 regardless of dimension. The scores arrive at the softmax pre-standardised — <strong>M1's open question, closed.</strong>`,
+  bayesApp: String.raw`<strong>Bayes' theorem</strong>: $P(A \mid B) = P(B \mid A)\,P(A)\,/\,P(B)$ — conditioning run backwards, with the priors doing the work everyone forgets. Worked example: a classifier flags "populist rhetoric" with $P(\text{flag} \mid \text{populist}) = 0.9$ and $P(\text{flag} \mid \text{not}) = 0.05$, and populist texts are 4% of the corpus. Then $P(\text{flag}) = 0.9 \times 0.04 + 0.05 \times 0.96 = 0.084$, and $P(\text{populist} \mid \text{flag}) = 0.9 \times 0.04 / 0.084 \approx 0.43$. A 90%-sensitive classifier is wrong more often than right among its flags, because the base rate is low — the validation module of the LLMs track is this arithmetic wearing a confusion matrix.`,
+  evVarApp: String.raw`<strong>Expectation</strong> $\mathbb{E}[X] = \sum_k p_k x_k$ is the probability-weighted average; <strong>variance</strong> $\operatorname{Var}(X) = \mathbb{E}[(X - \mathbb{E}X)^2]$ is the expected squared deviation. Two workhorse facts: expectations are always linear ($\mathbb{E}[X+Y] = \mathbb{E}X + \mathbb{E}Y$, no assumptions), and variances add <em>only for uncorrelated variables</em>. The §7.6 calculation in full: with $q_i, k_i$ independent, mean 0, variance 1, each product has $\mathbb{E}[q_i k_i] = \mathbb{E}[q_i]\mathbb{E}[k_i] = 0$ and $\operatorname{Var}(q_i k_i) = \mathbb{E}[q_i^2 k_i^2] = \mathbb{E}[q_i^2]\,\mathbb{E}[k_i^2] = 1$; the $d$ products are mutually independent, so their variances add to $d$, and the standard deviation is $\sqrt{d}$.`,
+  mleApp: String.raw`<strong>MLE consistency:</strong> as data grows, the maximum-likelihood estimate converges to the truth (when the model family contains it) — the frequentist licence for "just count and divide": the MLE for a categorical probability is the observed frequency. <strong>Distributions worth knowing by role:</strong> categorical (next-token outputs), Bernoulli/binomial (per-item classifier correctness), Gaussian (weight initialisation, and the limiting shape of averages — which is why the √d argument works for roughly-normal entries), Zipf (word frequencies, why vocabularies have long tails).`,
+  measureApp: String.raw`<strong>Why measure theory exists, in one paragraph:</strong> for finite vocabularies, "probability" is just a normalised table and nothing here needs more. Trouble starts with infinite spaces — a uniform draw from all infinite token sequences assigns every individual sequence probability zero, yet some <em>sets</em> of sequences are clearly likelier than others. Measure theory is the accounting system that makes "probability of a set" coherent when individual outcomes stop being informative. Nothing in this curriculum requires it; it is why the textbooks your statistics training leaned on could stay honest.`,
+};
+
+export const problems = [
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>A tiny corpus yields this contingency table of counts for a word pair (first word in rows, second in columns):</p><p>$$\begin{array}{c|ccc} & \text{survey} & \text{model} & \text{data} \\ \hline \text{the} & 30 & 15 & 15 \\ \text{a} & 10 & 25 & 5 \end{array}$$</p><p>Compute the joint distribution $P(w_1, w_2)$, both marginals, and the conditional $P(w_2 \mid w_1 = \text{a})$.</p>`,
+    solution: String.raw`<p>Total count 100, so divide everything by 100 for the joint: top row $(0.30, 0.15, 0.15)$, bottom row $(0.10, 0.25, 0.05)$. Marginal over $w_1$: $P(\text{the}) = 0.60$, $P(\text{a}) = 0.40$ (row sums). Marginal over $w_2$: $P(\text{survey}) = 0.40$, $P(\text{model}) = 0.40$, $P(\text{data}) = 0.20$ (column sums). Conditional: restrict to the "a" row and renormalise by $0.40$: $P(w_2 \mid \text{a}) = (0.25, 0.625, 0.125)$. Note the conditional is nothing like the marginal over $w_2$ — the first word carries real information about the second, which is the entire point of §3.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Compute $\text{softmax}(\mathbf{z})$ for $\mathbf{z} = (2, 1, 0)$ (three decimals). Then recompute for $\mathbf{z} + 10 = (12, 11, 10)$ and verify the distribution has not moved.</p>`,
+    solution: String.raw`<p>$e^2 = 7.389$, $e^1 = 2.718$, $e^0 = 1$; sum $= 11.107$; softmax $= (0.665, 0.245, 0.090)$. For $(12, 11, 10)$: every exponent picks up a factor $e^{10}$, which appears in numerator and denominator and cancels — same $(0.665, 0.245, 0.090)$ to every decimal place. Softmax sees only the gaps between scores, which is also why implementations may freely subtract the max before exponentiating.</p>`,
+  },
+  {
+    tag: 'mechanical',
+    statement: String.raw`<p>Factor $P(\text{the}, \text{survey}, \text{was}, \text{biased})$ by the chain rule of probability, in sequence order. No numbers — the exercise is writing the factorisation without dropping a conditioning term.</p>`,
+    solution: String.raw`<p>$P(\text{the}) \times P(\text{survey} \mid \text{the}) \times P(\text{was} \mid \text{the}, \text{survey}) \times P(\text{biased} \mid \text{the}, \text{survey}, \text{was})$. Each factor conditions on the <em>entire</em> prefix — not just the previous word (that truncation is the bigram approximation, and the difference between this exact factorisation and that approximation is the difference between a language model and an n-gram model).</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>To turn scores into probabilities, why exponentiate and normalise rather than simply divide each raw score by the sum of scores? Name what breaks — there are at least two failures.</p>`,
+    solution: String.raw`<p>First failure: negative scores. Raw scores are arbitrary reals; a negative score would yield a "negative probability", and a mix of signs can make the normalising sum zero or negative. Exponentiation maps every real to a strictly positive number first. Second failure: shift dependence. Raw-score division changes when you add a constant to every score — $(1,2)$ normalises to $(1/3, 2/3)$ but $(11,12)$ to $(0.478, 0.522)$ — so the output would depend on an arbitrary zero point that carries no information. Exponentiation makes the map depend only on score differences (shift invariance). Bonus property: $e^x$ is monotone, so ranking is preserved.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Show that the bag-of-words model assumes conditional independence of words given the topic, and give a pair of texts it cannot distinguish, however much data it is trained on.</p>`,
+    solution: String.raw`<p>Bag-of-words scores a text by $\prod_i P(w_i \mid \text{topic})$ — a product of per-word factors, none of which conditions on any other word. That <em>is</em> the definition of conditional independence given the topic; equivalently, the product is invariant to reordering its factors. Consequence: any two texts with the same word counts get identical probability — "the government blamed the protesters" and "the protesters blamed the government" are the same document to the model. Word order is precisely what conditional dependence carries and independence forfeits, which is why bag-of-words is a topic detector and not a meaning detector.</p>`,
+  },
+  {
+    tag: 'conceptual',
+    statement: String.raw`<p>Show that as $T \to 0$, $\text{softmax}_T(\mathbf{z})$ converges to a one-hot vector at the argmax (assume a unique maximum).</p>`,
+    solution: String.raw`<p>Let $z_{k^*}$ be the unique maximum and use shift invariance to subtract it: the $k^*$ entry's exponent becomes $e^0 = 1$, and every other entry is $e^{(z_k - z_{k^*})/T}$ with $z_k - z_{k^*} < 0$. As $T \to 0$, each such exponent $\to e^{-\infty} = 0$, so the normalising sum $\to 1$ and the distribution $\to (0, \ldots, 1, \ldots, 0)$ with the 1 at $k^*$. Sampling at $T \to 0$ is greedy decoding — and the widget shows the entropy readout collapsing towards 0 bits as it happens.</p>`,
+  },
+  {
+    tag: 'extension',
+    statement: String.raw`<p>Let $\mathbf{q}, \mathbf{k} \in \mathbb{R}^d$ have independent entries, each with mean 0 and variance 1. Show $\operatorname{Var}(\mathbf{q} \cdot \mathbf{k}) = d$, and conclude why attention divides scores by $\sqrt{d_k}$ — including what would go wrong at $d = 4096$ without it. (This is M1's planted question; you are now equipped to close it yourself.)</p>`,
+    solution: String.raw`<p>Each term: $\mathbb{E}[q_i k_i] = \mathbb{E}[q_i]\mathbb{E}[k_i] = 0$ by independence, and $\operatorname{Var}(q_i k_i) = \mathbb{E}[q_i^2 k_i^2] - 0 = \mathbb{E}[q_i^2]\,\mathbb{E}[k_i^2] = 1 \times 1 = 1$. The $d$ products are mutually independent, and variances of independent variables add: $\operatorname{Var}(\sum_i q_i k_i) = d$. So raw scores have standard deviation $\sqrt{d}$ — at $d = 4096$, typical scores of size $\pm 64$. Fed to a softmax, gaps that size drive it to a near-one-hot distribution (the $T \to 0$ regime of problem 6, arrived at by accident): one position takes all the attention, gradients through the other positions vanish, and learning stalls. Dividing by $\sqrt{d_k}$ makes the variance exactly 1 at every width — the scores arrive pre-standardised, softmax operates in its responsive regime, and the same architecture trains at $d = 64$ and $d = 4096$ alike.</p>`,
+  },
+];
+
+<section id="opening" class="opening-narrative">
+  <p class="lead-paragraph">
+    You already know probability — you have run hypothesis tests, read confidence intervals,
+    fitted likelihoods. But you know it as <em>inference</em>: a tool for deciding what is
+    true from data. Language models use the same mathematics pointed the other way — as
+    <em>generation</em>: a machine for saying what comes next. The gap between you and this
+    module is not competence; it is framing. Every object here — distributions, conditioning,
+    likelihood — is one you own, re-aimed at sequences of words. And by the end, the module
+    pays this track's oldest debt: M1 promised that the mysterious √d in attention would be
+    explained "once variance is available." Variance is about to be available.
+  </p>
+  <div class="key-takeaway">
+    <p class="key-takeaway__label">After This Module You Will Be Able To</p>
+    <ol>
+      <li>Describe a distribution over a vocabulary.</li>
+      <li>Decompose a joint distribution using the chain rule of probability.</li>
+      <li>Explain why language violates independence and what conditional dependence buys.</li>
+      <li>Derive softmax's properties — positivity, normalisation, shift invariance, and temperature.</li>
+      <li>State what a language model is, probabilistically — and close M1's open question about the √d in attention.</li>
+    </ol>
+  </div>
+</section>
+
+## A Distribution Over Fifty Thousand Outcomes
+
+Start with the reframe, stated plainly, because your training points the other way. In a
+statistics course, "distribution" summons a bell curve: a continuous variable, a mean, a
+standard deviation, tails. The distribution at the heart of a language model is none of
+these. It is a <em>list</em> — one entry per token in a vocabulary of roughly fifty
+thousand — of non-negative numbers that sum to one. No ordering (token 17,204 is not
+"between" its neighbours in any meaningful sense), no distances, no bell.
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Categorical Distribution</p>
+  <Tex tex={math.catDef} />
+</div>
+
+You have met this object before — it is the distribution of a survey question with fifty
+thousand response options. Everything you know about discrete probabilities transfers:
+probabilities of disjoint outcomes add, the whole list sums to one, expectations are
+probability-weighted averages. What changes is only the <em>size</em> and the <em>role</em>:
+this distribution is not something you estimate once and report — it is something the model
+produces fresh at every position in every sentence, as its answer to the only question it is
+ever asked: <em>what comes next?</em>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    The native distribution of language modelling is categorical: a labelled list of
+    non-negative numbers summing to one, over a vocabulary of tokens. Not continuous, not
+    Gaussian — and produced anew at every position, not estimated once.
+  </p>
+</div>
+
+## Joint, Marginal, Conditional — and the Chain Rule
+
+The grammar of probability has three moves, and you know all of them from cross-tabulations.
+The <strong>joint</strong> $P(w_1, w_2)$ is the full table — the probability of a
+<em>pair</em>. A <strong>marginal</strong> sums out what you do not care about — row and
+column totals. And a <strong>conditional</strong> restricts to the rows where something
+already happened, then renormalises:
+
+<div class="formula-block">
+  <Tex tex={math.condDef} />
+  <Tex class="formula-block__caption" tex={math.condDefCaption} />
+</div>
+
+Now apply the conditional's definition repeatedly to a whole sequence, and something
+remarkable falls out — an <em>exact</em> factorisation of any joint distribution over any
+sequence, with no assumptions whatsoever:
+
+<div class="formula-block">
+  <Tex tex={math.chainRule} />
+  <Tex class="formula-block__caption" tex={math.chainRuleCaption} />
+</div>
+
+Sit with this line; it deserves the weight. The probability of an entire text is a product
+of next-token probabilities, each conditioned on everything before it. So a machine that can
+supply each factor — one categorical distribution per position, given the prefix —
+<em>is</em> a full probability model of language. Not an approximation to one: the
+factorisation is exact. Every design decision in the LLMs track, from tokenisation to
+attention, is in service of estimating these conditional factors well. "Language model" is
+not a metaphor; it is this equation's job description.
+
+<details class="appendix-box">
+  <summary>Appendix · Bayes' theorem, properly</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.bayesApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Joint, marginal, conditional — the three moves you know from cross-tabs — combine into
+    the chain rule: any sequence's probability factors exactly into next-token conditionals.
+    That single line is what a language model is.
+  </p>
+</div>
+
+## Independence, and Why Language Refuses It
+
+Your statistics training prizes independence — it is the assumption that makes everything
+tractable. So it is worth seeing exactly what independence <em>costs</em> when the data is
+language. The classical bag-of-words model assumes words are independent given a topic:
+
+<div class="formula-block">
+  <Tex tex={math.bowIndep} />
+  <Tex class="formula-block__caption" tex={math.bowIndepCaption} />
+</div>
+
+A product of per-word factors is invariant to reordering its factors — multiplication does
+not care. So under bag-of-words, <em>"the government blamed the protesters"</em> and
+<em>"the protesters blamed the government"</em> are the same document: same words, same
+counts, same probability. For topic detection that is often fine, which is why the LLMs
+track's classical-methods module still teaches these models with respect. For meaning it is
+fatal — who blamed whom is the content, and it lives entirely in the ordering.
+
+Conditional dependence is not a nuisance to be assumed away; <strong>it is the signal.</strong>
+The conditional diverging from the marginal — the next-word distribution <em>given the
+prefix</em> differing from the next-word distribution in general — is precisely what it
+means for context to inform the next word. The chain rule
+never assumed independence, and that refusal is where all of a language model's capacity
+lives. The price is that the conditionals are hard to estimate — fifty thousand outcomes,
+conditioned on an unbounded prefix — and the transformer is the current best answer to that
+estimation problem.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    After the prefix "The results of the survey were …", the conditional distribution puts
+    high probability on <em>surprising</em>, <em>clear</em>, <em>mixed</em>. What does the
+    <em>marginal</em> distribution of the same position-in-general look like — and why is
+    the gap between those two distributions a measure of how much work the context did?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        The marginal — next-word probabilities ignoring the prefix — is dominated by
+        high-frequency function words: <em>the</em>, <em>of</em>, <em>and</em>. The prefix
+        moved probability mass from those defaults onto a handful of contextually apt
+        adjectives. That movement <em>is</em> the information the context carried; a model
+        that ignored context (bag-of-words) would be stuck with the marginal forever. M8
+        makes this gap precisely measurable — in bits.
+      </p>
+    </div>
+  </details>
+</div>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Independence makes estimation easy by declaring word order uninformative — the
+    bag-of-words bargain, acceptable for topics and fatal for meaning. Conditional
+    dependence is the whole content of context, and the chain rule keeps it.
+  </p>
+</div>
+
+## From Scores to Probabilities: Softmax
+
+A model's final layer produces a vector of raw scores — <em>logits</em> — one per vocabulary
+token: arbitrary reals, positive and negative, on no particular scale (M2's linear layer,
+one row per token). The chain rule needs a categorical distribution. The bridge is softmax,
+and it should be <em>derived</em>, not accepted.
+
+What must the bridge do? Turn any real vector into strictly positive numbers summing to one,
+while preserving the ranking of the scores. Normalising raw scores fails immediately —
+negative scores yield negative "probabilities" (the problem set makes you find the second,
+subtler failure). Exponentiation is the canonical repair: $e^z$ is positive for every real
+$z$ and strictly increasing, so exponentiate first, <em>then</em> normalise:
+
+<div class="formula-block">
+  <Tex tex={math.softmaxDef} />
+  <Tex class="formula-block__caption" tex={math.softmaxDefCaption} />
+</div>
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Softmax</p>
+  <Tex tex={math.softmaxBox} />
+</div>
+
+Two properties fall out of the algebra, and both matter downstream. First, <strong>shift
+invariance</strong>:
+
+<div class="formula-block">
+  <Tex tex={math.shiftInv} />
+  <Tex class="formula-block__caption" tex={math.shiftInvCaption} />
+</div>
+
+Second, <strong>temperature</strong> — divide all logits by $T$ before exponentiating. This
+is the parameter you set in every API call, and the widget's job is to correct the folk
+reading of it. Temperature is <em>not</em> a creativity dial or a confidence setting: the
+scores never change. It is a <strong>sharpness</strong> setting on a fixed ranking — $T \to 0$
+concentrates all mass on the argmax (greedy decoding), large $T$ flattens towards uniform,
+and $T = 1$ reads the logits as they are. Convince your hands:
+
+<SoftmaxExplorer />
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Softmax is the forced bridge from arbitrary scores to a categorical distribution:
+    exponentiate (positivity, order preserved), normalise (sums to one). It sees only score
+    differences — shift invariance, which is also the numerical-stability trick — and
+    temperature rescales those differences: sharpness, not confidence.
+  </p>
+</div>
+
+## Likelihood, and What "Training" Means
+
+One more object from your statistics training, re-aimed. You have maximised likelihoods —
+that is how your logit and probit models were fitted. The move transfers whole:
+
+<div class="definition-box">
+  <p class="definition-box__label">Definition</p>
+  <p class="definition-box__term">Likelihood &amp; MLE</p>
+  <Tex tex={math.likelihoodDef} />
+</div>
+
+For a language model, the data is a corpus and the model is the chain rule with learnable
+conditionals. Take logs — products become sums, and nothing else changes, since log is
+monotone:
+
+<div class="formula-block">
+  <Tex tex={math.logLik} />
+  <Tex class="formula-block__caption" tex={math.logLikCaption} />
+</div>
+
+This is what "training" <em>means</em>, probabilistically: choose parameters that make the
+observed text as unsurprising as possible, one next-token prediction at a time. The
+gradient-descent machinery of M6 is <em>how</em>; this sum is <em>what</em>. And a
+bookkeeping note that becomes M8's opening move: practitioners do not say "maximise
+log-likelihood" — they say "minimise cross-entropy loss." Those are the same sentence, and
+proving it — and discovering that the units of that loss are <em>bits of surprise</em> — is
+where the next module begins.
+
+<details class="appendix-box">
+  <summary>Appendix · MLE consistency, and distributions worth knowing</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.mleApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    Training a language model is maximum likelihood estimation — the procedure that fitted
+    your logit models — applied to the chain rule's factors: maximise the summed
+    log-probability of every next token in the corpus. Cross-entropy loss is this, renamed;
+    M8 owns the proof.
+  </p>
+</div>
+
+## Where This Lands: The √d Debt, Paid
+
+Assemble the module. A language model is a machine for conditional categorical
+distributions: feed it a prefix, receive a categorical distribution over the vocabulary.
+<strong>Generation is sampling</strong> from that distribution — at temperature, using
+exactly the softmax of this module — then appending the sampled token and asking again. The
+mysterious fluency of generated text is the chain rule run forwards, fifty thousand-way
+categorical draws chained one conditioning step at a time.
+
+And now the promise. M1 defined the attention score as a scaled dot product and flagged the
+scale as a question this track would answer honestly rather than wave at: <em>why divide by
+the square root of the key dimension?</em> You now hold both required tools — the
+high-dimensional geometry of M1 and, as of this module, variance. Query and key vectors have
+roughly independent, roughly unit-variance entries (initialisation and normalisation layers
+keep them so). Their dot product is a sum of $d$ independent products:
+
+<div class="formula-block">
+  <Tex tex={math.varSum} />
+  <Tex class="formula-block__caption" tex={math.varSumCaption} />
+</div>
+
+So <em>unscaled</em> scores grow like $\sqrt d$ — at $d_k = 4096$, typical scores near
+$\pm 64$. And you have just spent a section learning exactly what score gaps that large do
+to a softmax: they are the $T \to 0$ regime arrived at by accident. The distribution
+saturates to a near-one-hot; one position monopolises the attention; gradients through every
+other position vanish; the network stops learning. The repair is the one your statistics
+training reaches for instinctively — <strong>standardise</strong>:
+
+<div class="formula-block">
+  <Tex tex={math.attnScaled} />
+  <Tex class="formula-block__caption" tex={math.attnScaledCaption} />
+</div>
+
+The √d is a z-score. Attention divides by the standard deviation of its own scores so that
+the softmax downstream operates in its responsive regime at any model width — the same
+normalisation reflex you apply to survey scales, deployed inside the transformer. M1's
+question, planted in the track's first module, is closed by its last tool: variance.
+
+<div class="stop-and-think">
+  <div class="stop-and-think__header">
+    <svg class="stop-and-think__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <span class="stop-and-think__label">Stop and Think</span>
+  </div>
+  <p>
+    In the widget above, drag one token's logit up to +5 and everything else low — a
+    "saturated" softmax. Now imagine the gradient signal: if the model's training update
+    depends on how the distribution <em>changes</em> when scores move slightly, why is a
+    saturated softmax a place where learning stalls?
+  </p>
+  <details>
+    <summary>Reveal</summary>
+    <div>
+      <p>
+        Nudge any logit in a saturated softmax and watch the bars: almost nothing moves —
+        the winner keeps essentially all the mass, the losers keep essentially none. The
+        distribution is locally <em>flat</em> in the scores, so the derivative of the output
+        with respect to every score is near zero, and M5 told you what a chain of
+        near-zeros does to a gradient: kills it. Softmax learns in its responsive middle
+        regime, which is exactly where the √d scaling keeps it.
+      </p>
+    </div>
+  </details>
+</div>
+
+<details class="appendix-box">
+  <summary>Appendix · expectation, variance, and the full √d calculation; why measure theory exists</summary>
+  <div class="appendix-box__body">
+    <Tex tex={math.evVarApp} />
+    <Tex tex={math.measureApp} />
+  </div>
+</details>
+
+<div class="key-takeaway">
+  <p class="key-takeaway__label">Key Takeaway</p>
+  <p>
+    A language model is the chain rule with learned conditionals; generation is sampling
+    from them at temperature. And the √d in attention is a z-score: dot products of
+    d-dimensional random vectors have variance d, so dividing by √d pins the score spread
+    at 1 and keeps softmax — and therefore learning — in its responsive regime. M1's open
+    question, closed.
+  </p>
+</div>
+
+## Problem Set
+
+Seven problems, easy to hard. Problem 7 is the module's capstone: the √d argument, done
+with your own hands.
+
+<ProblemSet problems={problems} />
+
+<section id="summary" class="opening-narrative">
+  <h2 id="module-summary">Module Summary</h2>
+  <p>
+    The reframe: probability as generation rather than inference. The native object is the
+    categorical distribution — a labelled list summing to one, over fifty thousand tokens —
+    produced fresh at every position. The chain rule factors any sequence's probability
+    exactly into next-token conditionals, and that single line is what a language model is;
+    independence would make the factors easy and the model worthless, because conditional
+    dependence is the entire content of context. Softmax is the forced bridge from scores to
+    distributions — positive, normalised, rank-preserving, shift-invariant, with temperature
+    as sharpness on a fixed ranking rather than confidence. Training is maximum likelihood:
+    the summed log-probability of every next token, the same estimator that fitted your
+    logit models. And the track's oldest debt is paid: attention divides by √d because
+    variances of independent products add — raw dot-product scores spread like √d, which
+    would saturate softmax into its unlearnable regime, so the scale is a z-score applied
+    where you cannot see it. One handoff remains open: cross-entropy loss "is" maximum
+    likelihood, and its unit is the bit. M8 begins there.
+  </p>
+
+  <h3>Resources</h3>
+  <ul class="resource-list">
+    <li><a href="https://mml-book.github.io/" target="_blank" rel="noopener">Deisenroth, Faisal &amp; Ong, <em>Mathematics for Machine Learning</em>, ch. 6</a>: probability and distributions at textbook depth, free online.</li>
+    <li><a href="https://www.inference.org.uk/itprnn/book.pdf" target="_blank" rel="noopener">MacKay, <em>Information Theory, Inference, and Learning Algorithms</em>, ch. 2</a>: probability as extended logic, by the field's great teacher — free, and the natural bridge into M8.</li>
+    <li><a href="https://web.stanford.edu/~jurafsky/slp3/3.pdf" target="_blank" rel="noopener">Jurafsky &amp; Martin, <em>Speech and Language Processing</em>, ch. 3</a>: n-gram language models — the chain rule with truncated conditioning, and the honest ancestor of everything in the LLMs track.</li>
+  </ul>
+</section>

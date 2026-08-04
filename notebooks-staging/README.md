@@ -13,3 +13,4 @@ never part of the site build.
 | `math/m1_vectors.ipynb` | `modules/math/m1_vectors.ipynb` | explanatory ("Play with this") |
 | `math/m2_matrices.ipynb` | `modules/math/m2_matrices.ipynb` | explanatory ("Play with this") |
 | `math/m3_projection.ipynb` | `modules/math/m3_projection.ipynb` | explanatory ("Play with this") |
+| `math/m5_derivatives.ipynb` | `modules/math/m5_derivatives.ipynb` | explanatory ("Play with this") |

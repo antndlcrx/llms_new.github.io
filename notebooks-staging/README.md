@@ -17,3 +17,4 @@ never part of the site build.
 | `math/m5_derivatives.ipynb` | `modules/math/m5_derivatives.ipynb` | explanatory ("Play with this") |
 | `math/m6_optimisation.ipynb` | `modules/math/m6_optimisation.ipynb` | explanatory ("Play with this") |
 | `math/m7_probability.ipynb` | `modules/math/m7_probability.ipynb` | explanatory ("Play with this") |
+| `math/m8_information.ipynb` | `modules/math/m8_information.ipynb` | explanatory ("Play with this") |
